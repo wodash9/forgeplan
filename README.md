@@ -2,7 +2,7 @@
 
 ForgePlan is a local-first platform for modeling production plants, validating feasibility, and eventually optimizing production schedules.
 
-This repository currently contains the local-first ForgePlan foundation through **Phase 5.0: OR-Tools CP-SAT Local Adapter**.
+This repository currently contains the local-first ForgePlan foundation through **Phase 5.1: Local Solve Command Boundary**.
 
 ## Current scope
 
@@ -20,6 +20,7 @@ Included:
 - UI solve feedback with mock schedule KPIs
 - simple Gantt/timeline schedule visualization
 - local OR-Tools CP-SAT adapter for Node/Python environments
+- local solve CLI boundary for mock/CP-SAT schedules
 - minimal valid/invalid JSON fixtures
 - unit tests
 
@@ -59,6 +60,7 @@ Specs live in Etharlia:
 - `wiki/development/forgeplan/forgeplan-4-1-ui-solve-feedback.md`
 - `wiki/development/forgeplan/forgeplan-4-2-schedule-gantt-visualization.md`
 - `wiki/development/forgeplan/forgeplan-5-0-ortools-cp-sat-local-adapter.md`
+- `wiki/development/forgeplan/forgeplan-5-1-local-solve-command-boundary.md`
 
 ## Local store
 
@@ -80,6 +82,16 @@ The `MockSolverAdapter` creates deterministic feasible/infeasible schedules for 
 
 Node-only solver integrations live behind separate imports so the browser bundle stays clean. `OrToolsCpSatAdapter` runs a local Python OR-Tools CP-SAT worker through stdin/stdout JSON and supports fixed-resource operations, no-overlap, route precedences, horizon, and makespan minimization. It fails explicitly when Python or OR-Tools is unavailable; this repository does not install OR-Tools automatically.
 
+Run a local solve from a built checkout:
+
+```bash
+npm run build
+npm run solve -- fixtures/minimal-valid-plant.json --strategy mock
+npm run solve -- fixtures/minimal-valid-plant.json --strategy cp_sat --time-limit 5
+```
+
+The command prints canonical `Schedule` JSON to stdout. `mock` is the safe default; `cp_sat` requires local Python OR-Tools. TypeScript build artifacts go to `dist/`; Vite web artifacts go to `dist-web/` so the local solve CLI remains available after web builds.
+
 ## Web editor
 
 Run the local visual editor:
@@ -94,4 +106,4 @@ Use **Run mock solve** to build a local solver model, run the deterministic mock
 
 ## Next phase candidate
 
-ForgePlan 5.1 — CP-SAT solve command/API boundary, or ForgePlan 5.2 — richer CP-SAT model features such as setup times, alternate machines, batching, and cumulative capacity.
+ForgePlan 5.2 — richer CP-SAT model features such as setup times, alternate machines, batching, and cumulative capacity; or ForgePlan 5.3 — connect UI solve strategy selection to the local command/API boundary.

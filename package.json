@@ -9,6 +9,7 @@
     "build:web": "vite build",
     "dev": "vite",
     "preview": "vite preview",
+    "solve": "node scripts/forgeplan-solve.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },

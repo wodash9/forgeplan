@@ -72,7 +72,7 @@ export const plantSchema = z.object({
   orders: z.array(orderSchema),
 });
 
-export const solverStrategySchema = z.enum(['mock', 'heuristic', 'decomposed', 'monolithic', 'lexicographic']);
+export const solverStrategySchema = z.enum(['mock', 'cp_sat', 'heuristic', 'decomposed', 'monolithic', 'lexicographic']);
 
 export const solverSettingsSchema = z.object({
   strategy: solverStrategySchema,
