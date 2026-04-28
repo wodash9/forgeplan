@@ -216,7 +216,7 @@ export default function App() {
             )}
           </div>
 
-          <SolvePanel schedule={schedule} />
+          <SolvePanel schedule={schedule} plant={plant} />
         </aside>
       </main>
     </div>
@@ -227,7 +227,41 @@ function ReadinessBadge({ status }: { status: ReturnType<typeof validatePlant>['
   return <div className={`readiness-badge ${status}`}>{status.replaceAll('_', ' ')}</div>;
 }
 
-function SolvePanel({ schedule }: { schedule: Schedule | null }) {
+function ScheduleTimeline({ schedule, plant }: { schedule: Schedule; plant: Plant }) {
+  const scaleEnd = Math.max(schedule.kpis.makespan, ...schedule.operations.map((operation) => operation.end), 1);
+
+  return (
+    <div className="timeline-panel" aria-label="Schedule timeline">
+      <div className="timeline-header">
+        <h4>Schedule timeline</h4>
+        <span>0 → {scaleEnd}</span>
+      </div>
+      <div className="timeline-rows">
+        {schedule.operations.map((operation) => {
+          const node = plant.nodes.find((item) => item.id === operation.nodeId);
+          const left = (operation.start / scaleEnd) * 100;
+          const width = Math.max(((operation.end - operation.start) / scaleEnd) * 100, 4);
+
+          return (
+            <div className="timeline-row" key={operation.id}>
+              <div className="timeline-resource">
+                <strong>{node?.name ?? operation.nodeId}</strong>
+                <span>{node ? nodeLabels[node.type] : operation.nodeId}</span>
+              </div>
+              <div className="timeline-track">
+                <div className="timeline-bar" style={{ marginLeft: `${left}%`, width: `${width}%` }}>
+                  {operation.start}–{operation.end} · {operation.quantity}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SolvePanel({ schedule, plant }: { schedule: Schedule | null; plant: Plant }) {
   return (
     <div className="solve-panel" aria-label="Solve feedback">
       <h3>Mock solve</h3>
@@ -257,15 +291,19 @@ function SolvePanel({ schedule }: { schedule: Schedule | null }) {
               ))}
             </ul>
           )}
+          <ScheduleTimeline schedule={schedule} plant={plant} />
           <ol className="operation-list">
-            {schedule.operations.map((operation) => (
-              <li key={operation.id}>
-                <strong>{operation.nodeId}</strong>
-                <span>
-                  {operation.start} → {operation.end} · {operation.quantity}
-                </span>
-              </li>
-            ))}
+            {schedule.operations.map((operation) => {
+              const node = plant.nodes.find((item) => item.id === operation.nodeId);
+              return (
+                <li key={operation.id}>
+                  <strong>{node?.name ?? operation.nodeId}</strong>
+                  <span>
+                    {operation.start} → {operation.end} · {operation.quantity}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
         </>
       )}

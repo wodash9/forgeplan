@@ -35,8 +35,11 @@ describe('ForgePlan visual plant editor', () => {
     expect(screen.getByText('makespan')).toBeInTheDocument();
     expect(screen.getByText('late orders')).toBeInTheDocument();
     expect(screen.getByText('tardiness')).toBeInTheDocument();
-    expect(screen.getByText('node_mixer')).toBeInTheDocument();
-    expect(screen.getByText(/0 → 30/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Schedule timeline')).toBeInTheDocument();
+    expect(screen.getByText('Schedule timeline')).toBeInTheDocument();
+    expect(screen.getAllByText('Mixer 1').length).toBeGreaterThan(0);
+    expect(screen.getByText(/0–30/)).toBeInTheDocument();
+    expect(screen.getAllByText(/0 → 30/).length).toBeGreaterThan(0);
   });
 
   it('edits the selected node name and capacity', async () => {
