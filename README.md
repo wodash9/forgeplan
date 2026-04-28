@@ -2,7 +2,7 @@
 
 ForgePlan is a local-first platform for modeling production plants, validating feasibility, and eventually optimizing production schedules.
 
-This repository currently contains **Phase 1.0: Domain Kernel + Local JSON Fixture**.
+This repository currently contains the local-first ForgePlan foundation through **Phase 4.0: Solver IR + Mock Solver**.
 
 ## Current scope
 
@@ -15,6 +15,8 @@ Included:
 - append-only event log
 - React + Vite visual plant editor MVP
 - React Flow / XYFlow node canvas
+- solver IR for scheduling model translation
+- deterministic mock solver adapter
 - minimal valid/invalid JSON fixtures
 - unit tests
 
@@ -22,7 +24,7 @@ Not included yet:
 
 - advanced custom node asset library
 - local HTTP API
-- real solver
+- real external solver
 - CP-SAT
 - networking/cloud
 
@@ -50,6 +52,7 @@ Specs live in Etharlia:
 - `wiki/development/forgeplan/forgeplan-2-0-local-persistence-sqlite-event-log.md`
 - `wiki/development/forgeplan/forgeplan-3-0-visual-plant-editor-mvp.md`
 - `wiki/development/forgeplan/forgeplan-3-1-react-flow-node-canvas.md`
+- `wiki/development/forgeplan/forgeplan-4-0-solver-ir-mock-solver.md`
 
 ## Local store
 
@@ -63,6 +66,12 @@ Current tables:
 - `schedules`
 - `events`
 
+## Solver IR
+
+ForgePlan translates canonical `Plant + Scenario` data into a solver-neutral `SolverModel` with resources, operations, precedences, orders, horizon, time unit, and objective.
+
+The `MockSolverAdapter` creates deterministic feasible/infeasible schedules for integration tests and UI plumbing. It does not optimize and should not be used for production decisions.
+
 ## Web editor
 
 Run the local visual editor:
@@ -75,4 +84,4 @@ The current editor uses React Flow / XYFlow for the node canvas, edges, selectio
 
 ## Next phase candidate
 
-ForgePlan 4.0 — Local API boundary or a richer React Flow editor pass with custom nodes, drag/drop palette, and interactive connection creation.
+ForgePlan 5.0 — OR-Tools CP-SAT local adapter, or ForgePlan 4.1 — connect the visual editor to solver IR/mock solve feedback.
