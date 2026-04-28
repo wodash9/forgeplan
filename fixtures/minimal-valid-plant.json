@@ -1,0 +1,72 @@
+{
+  "id": "plant_demo",
+  "name": "Demo Forge Plant",
+  "version": 1,
+  "timeHorizon": 480,
+  "timeUnit": "minute",
+  "materials": [
+    {
+      "id": "mat_feed",
+      "name": "Feed Product",
+      "unit": "kg",
+      "compatibilityTags": ["feed"]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node_source",
+      "name": "Raw Input",
+      "type": "source",
+      "position": { "x": 0, "y": 100 },
+      "compatibleMaterials": ["mat_feed"],
+      "metadata": {}
+    },
+    {
+      "id": "node_mixer",
+      "name": "Mixer 1",
+      "type": "mixer",
+      "position": { "x": 240, "y": 100 },
+      "capacity": 100,
+      "processingTime": 30,
+      "compatibleMaterials": ["mat_feed"],
+      "metadata": {}
+    },
+    {
+      "id": "node_dispatch",
+      "name": "Dispatch",
+      "type": "dispatch",
+      "position": { "x": 480, "y": 100 },
+      "compatibleMaterials": ["mat_feed"],
+      "metadata": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn_source_mixer",
+      "sourceNodeId": "node_source",
+      "targetNodeId": "node_mixer",
+      "materialTypes": ["mat_feed"],
+      "capacity": 100,
+      "transportTime": 0,
+      "enabled": true
+    },
+    {
+      "id": "conn_mixer_dispatch",
+      "sourceNodeId": "node_mixer",
+      "targetNodeId": "node_dispatch",
+      "materialTypes": ["mat_feed"],
+      "capacity": 100,
+      "transportTime": 5,
+      "enabled": true
+    }
+  ],
+  "orders": [
+    {
+      "id": "order_1",
+      "materialId": "mat_feed",
+      "quantity": 80,
+      "dueTime": 240,
+      "priority": 1
+    }
+  ]
+}

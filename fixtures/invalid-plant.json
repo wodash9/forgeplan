@@ -1,0 +1,36 @@
+{
+  "id": "plant_invalid",
+  "name": "Invalid Plant",
+  "version": 1,
+  "timeHorizon": 480,
+  "timeUnit": "minute",
+  "materials": [],
+  "nodes": [
+    {
+      "id": "node_mixer",
+      "name": "Broken Mixer",
+      "type": "mixer",
+      "position": { "x": 0, "y": 0 },
+      "capacity": -10,
+      "processingTime": 30,
+      "metadata": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn_broken",
+      "sourceNodeId": "node_missing",
+      "targetNodeId": "node_mixer",
+      "enabled": true
+    }
+  ],
+  "orders": [
+    {
+      "id": "order_unknown",
+      "materialId": "mat_missing",
+      "quantity": 20,
+      "dueTime": 100,
+      "priority": 1
+    }
+  ]
+}
