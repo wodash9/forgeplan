@@ -6,14 +6,26 @@
   "description": "Local-first production plant modeling and optimization platform.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:web": "vite build",
+    "dev": "vite",
+    "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "zod": "^3.24.4"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.15.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "jsdom": "^29.1.0",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"
   }

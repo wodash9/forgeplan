@@ -13,12 +13,13 @@ Included:
 - plant validation helpers
 - SQLite local store using `node:sqlite`
 - append-only event log
+- React + Vite visual plant editor MVP
 - minimal valid/invalid JSON fixtures
 - unit tests
 
 Not included yet:
 
-- frontend
+- advanced React Flow canvas
 - local HTTP API
 - real solver
 - CP-SAT
@@ -31,6 +32,7 @@ npm install
 npm run typecheck
 npm test
 npm run build
+npm run build:web
 ```
 
 ## Fixtures
@@ -57,6 +59,16 @@ Current tables:
 - `schedules`
 - `events`
 
+## Web editor
+
+Run the local visual editor:
+
+```bash
+npm run dev
+```
+
+The current editor uses a simple HTML/CSS canvas to validate the domain-to-UI flow before introducing React Flow.
+
 ## Next phase candidate
 
-ForgePlan 3.0 — Visual plant editor MVP or local API boundary.
+ForgePlan 4.0 — Local API boundary or React Flow canvas upgrade.
