@@ -83,37 +83,27 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .canvas-toolbar h2 { margin-bottom: 0; }
 .canvas-toolbar span { color: #60726a; font-weight: 700; }
-.canvas-surface {
-  position: relative;
+.flow-surface {
   height: 470px;
   overflow: hidden;
-  background-image:
-    linear-gradient(#dfe7dc 1px, transparent 1px),
-    linear-gradient(90deg, #dfe7dc 1px, transparent 1px);
-  background-size: 28px 28px;
-  background-color: #f7faf5;
+  background: #f7faf5;
 }
-.connection-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.connection-layer line { stroke: #739a87; stroke-width: 4; stroke-linecap: round; }
-.plant-node {
-  position: absolute;
-  width: 116px;
-  min-height: 74px;
+.flow-surface .react-flow__pane { cursor: grab; }
+.flow-surface .react-flow__edge-path { stroke: #739a87; stroke-width: 3; }
+.flow-surface .react-flow__edge.animated path { stroke-dasharray: 8; }
+.plant-flow-node {
+  min-width: 128px;
   border: 2px solid #9ab5a6;
   border-radius: 18px;
-  padding: 10px;
+  padding: 10px 12px;
   background: #ffffff;
   color: #16241d;
-  text-align: left;
-  cursor: pointer;
   box-shadow: 0 10px 24px rgb(31 64 52 / 14%);
 }
-.plant-node.selected { border-color: #1e5c45; box-shadow: 0 0 0 5px rgb(30 92 69 / 16%), 0 14px 30px rgb(31 64 52 / 20%); }
-.plant-node.source { background: #eef8ff; }
-.plant-node.dispatch { background: #fff7e6; }
-.node-type { display: block; color: #60726a; font-size: 12px; font-weight: 800; text-transform: uppercase; }
-.plant-node strong { display: block; margin-top: 4px; }
-.plant-node small { display: block; margin-top: 6px; color: #60726a; }
+.plant-flow-node.selected { border-color: #1e5c45; box-shadow: 0 0 0 5px rgb(30 92 69 / 16%), 0 14px 30px rgb(31 64 52 / 20%); }
+.plant-flow-node.source { background: #eef8ff; }
+.plant-flow-node.dispatch { background: #fff7e6; }
+.plant-flow-node .react-flow__node-default { border: 0; }
 
 .inspector label { display: grid; gap: 8px; margin-bottom: 16px; color: #415249; font-weight: 800; }
 .inspector input { width: 100%; border: 1px solid #c8d3cc; border-radius: 14px; padding: 11px 12px; }

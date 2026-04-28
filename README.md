@@ -14,12 +14,13 @@ Included:
 - SQLite local store using `node:sqlite`
 - append-only event log
 - React + Vite visual plant editor MVP
+- React Flow / XYFlow node canvas
 - minimal valid/invalid JSON fixtures
 - unit tests
 
 Not included yet:
 
-- advanced React Flow canvas
+- advanced custom node asset library
 - local HTTP API
 - real solver
 - CP-SAT
@@ -46,6 +47,9 @@ Specs live in Etharlia:
 
 - `wiki/projects/forgeplan.md`
 - `wiki/development/forgeplan/forgeplan-1-0-domain-kernel-local-fixture.md`
+- `wiki/development/forgeplan/forgeplan-2-0-local-persistence-sqlite-event-log.md`
+- `wiki/development/forgeplan/forgeplan-3-0-visual-plant-editor-mvp.md`
+- `wiki/development/forgeplan/forgeplan-3-1-react-flow-node-canvas.md`
 
 ## Local store
 
@@ -67,8 +71,8 @@ Run the local visual editor:
 npm run dev
 ```
 
-The current editor uses a simple HTML/CSS canvas to validate the domain-to-UI flow before introducing React Flow.
+The current editor uses React Flow / XYFlow for the node canvas, edges, selection, pan/zoom controls, and node dragging while keeping the canonical ForgePlan `Plant` model as the source of truth.
 
 ## Next phase candidate
 
-ForgePlan 4.0 — Local API boundary or React Flow canvas upgrade.
+ForgePlan 4.0 — Local API boundary or a richer React Flow editor pass with custom nodes, drag/drop palette, and interactive connection creation.

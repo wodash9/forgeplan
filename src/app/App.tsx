@@ -1,4 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  Background,
+  Controls,
+  ReactFlow,
+  type Edge,
+  type Node,
+  type NodeMouseHandler,
+  type OnNodeDrag,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 
 import type { Plant, PlantNode } from '../domain/types.js';
 import { validatePlant } from '../validation/validatePlant.js';
@@ -19,11 +29,46 @@ const nodeLabels: Record<PlantNode['type'], string> = {
   sink: 'Sink',
 };
 
+interface FlowNodeData extends Record<string, unknown> {
+  label: string;
+  nodeType: PlantNode['type'];
+  capacity?: number | undefined;
+}
+
 export default function App() {
   const [plant, setPlant] = useState<Plant>(() => createDemoPlant());
   const [selectedNodeId, setSelectedNodeId] = useState('node_mixer');
   const validation = useMemo(() => validatePlant(plant), [plant]);
   const selectedNode = plant.nodes.find((node) => node.id === selectedNodeId) ?? plant.nodes[0];
+
+  const flowNodes = useMemo<Node<FlowNodeData>[]>(
+    () =>
+      plant.nodes.map((node) => ({
+        id: node.id,
+        type: 'default',
+        position: node.position,
+        selected: node.id === selectedNodeId,
+        data: {
+          label: node.name,
+          nodeType: node.type,
+          capacity: node.capacity,
+        },
+        className: `plant-flow-node ${node.type}`,
+      })),
+    [plant.nodes, selectedNodeId],
+  );
+
+  const flowEdges = useMemo<Edge[]>(
+    () =>
+      plant.connections.map((connection) => ({
+        id: connection.id,
+        source: connection.sourceNodeId,
+        target: connection.targetNodeId,
+        label: connection.materialTypes?.join(', '),
+        animated: connection.enabled,
+      })),
+    [plant.connections],
+  );
 
   const updateSelectedNode = (patch: Partial<PlantNode>) => {
     if (!selectedNode) return;
@@ -43,6 +88,19 @@ export default function App() {
     setPlant((current) => ({ ...current, nodes: [...current.nodes, mixer] }));
     setSelectedNodeId(id);
   };
+
+  const handleNodeClick = useCallback<NodeMouseHandler>((_, node) => {
+    setSelectedNodeId(node.id);
+  }, []);
+
+  const handleNodeDragStop = useCallback<OnNodeDrag<Node<FlowNodeData>>>((_, node) => {
+    setPlant((current) => ({
+      ...current,
+      nodes: current.nodes.map((plantNode) =>
+        plantNode.id === node.id ? { ...plantNode, position: { x: node.position.x, y: node.position.y } } : plantNode,
+      ),
+    }));
+  }, []);
 
   return (
     <div className="app-shell">
@@ -78,37 +136,20 @@ export default function App() {
             </div>
             <span>{plant.orders.length} order ready</span>
           </div>
-          <div className="canvas-surface">
-            <svg className="connection-layer" aria-hidden="true">
-              {plant.connections.map((connection) => {
-                const source = plant.nodes.find((node) => node.id === connection.sourceNodeId);
-                const target = plant.nodes.find((node) => node.id === connection.targetNodeId);
-                if (!source || !target) return null;
-                return (
-                  <line
-                    key={connection.id}
-                    x1={source.position.x + 86}
-                    y1={source.position.y + 34}
-                    x2={target.position.x}
-                    y2={target.position.y + 34}
-                  />
-                );
-              })}
-            </svg>
-            {plant.nodes.map((node) => (
-              <button
-                key={node.id}
-                type="button"
-                className={`plant-node ${node.type} ${node.id === selectedNode?.id ? 'selected' : ''}`}
-                style={{ left: node.position.x, top: node.position.y }}
-                onClick={() => setSelectedNodeId(node.id)}
-                aria-pressed={node.id === selectedNode?.id}
-              >
-                <span className="node-type">{nodeLabels[node.type]}</span>
-                <strong>{node.name}</strong>
-                {node.capacity !== undefined && <small>{node.capacity} cap</small>}
-              </button>
-            ))}
+          <div className="flow-surface" data-testid="forgeplan-flow-canvas">
+            <ReactFlow
+              nodes={flowNodes}
+              edges={flowEdges}
+              fitView
+              onNodeClick={handleNodeClick}
+              onNodeDragStop={handleNodeDragStop}
+              nodesDraggable
+              nodesConnectable={false}
+              elementsSelectable
+            >
+              <Background />
+              <Controls showInteractive={false} />
+            </ReactFlow>
           </div>
         </section>
 
