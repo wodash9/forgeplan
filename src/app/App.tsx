@@ -10,7 +10,9 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { Plant, PlantNode } from '../domain/types.js';
+import type { Plant, PlantNode, Schedule } from '../domain/types.js';
+import { createScenario } from '../domain/defaults.js';
+import { buildSolverModel, mockSolverAdapter } from '../solver/index.js';
 import { validatePlant } from '../validation/validatePlant.js';
 import { createDemoPlant, createNode } from './demoPlant.js';
 import './styles.css';
@@ -38,7 +40,9 @@ interface FlowNodeData extends Record<string, unknown> {
 export default function App() {
   const [plant, setPlant] = useState<Plant>(() => createDemoPlant());
   const [selectedNodeId, setSelectedNodeId] = useState('node_mixer');
+  const [schedule, setSchedule] = useState<Schedule | null>(null);
   const validation = useMemo(() => validatePlant(plant), [plant]);
+  const scenario = useMemo(() => createScenario(plant), [plant]);
   const selectedNode = plant.nodes.find((node) => node.id === selectedNodeId) ?? plant.nodes[0];
 
   const flowNodes = useMemo<Node<FlowNodeData>[]>(
@@ -76,6 +80,7 @@ export default function App() {
       ...current,
       nodes: current.nodes.map((node) => (node.id === selectedNode.id ? { ...node, ...patch } : node)),
     }));
+    setSchedule(null);
   };
 
   const addMixer = () => {
@@ -87,6 +92,13 @@ export default function App() {
     });
     setPlant((current) => ({ ...current, nodes: [...current.nodes, mixer] }));
     setSelectedNodeId(id);
+    setSchedule(null);
+  };
+
+  const runMockSolve = () => {
+    const solverModel = buildSolverModel(plant, scenario);
+    const result = mockSolverAdapter.solve(solverModel);
+    setSchedule(result.schedule);
   };
 
   const handleNodeClick = useCallback<NodeMouseHandler>((_, node) => {
@@ -100,6 +112,7 @@ export default function App() {
         plantNode.id === node.id ? { ...plantNode, position: { x: node.position.x, y: node.position.y } } : plantNode,
       ),
     }));
+    setSchedule(null);
   }, []);
 
   return (
@@ -118,6 +131,9 @@ export default function App() {
           <p className="eyebrow">Palette</p>
           <h2>Add equipment</h2>
           <button type="button" onClick={addMixer}>Add mixer</button>
+          <button className="secondary-action" type="button" onClick={runMockSolve} disabled={validation.status === 'not_ready'}>
+            Run mock solve
+          </button>
           <div className="summary-card">
             <strong>{plant.nodes.length}</strong>
             <span>nodes</span>
@@ -199,6 +215,8 @@ export default function App() {
               </ul>
             )}
           </div>
+
+          <SolvePanel schedule={schedule} />
         </aside>
       </main>
     </div>
@@ -207,4 +225,50 @@ export default function App() {
 
 function ReadinessBadge({ status }: { status: ReturnType<typeof validatePlant>['status'] }) {
   return <div className={`readiness-badge ${status}`}>{status.replaceAll('_', ' ')}</div>;
+}
+
+function SolvePanel({ schedule }: { schedule: Schedule | null }) {
+  return (
+    <div className="solve-panel" aria-label="Solve feedback">
+      <h3>Mock solve</h3>
+      {!schedule ? (
+        <p className="muted-dark">Run the mock solver to preview schedule feedback.</p>
+      ) : (
+        <>
+          <div className={`solve-status ${schedule.status}`}>{schedule.status}</div>
+          <div className="kpi-grid">
+            <div>
+              <strong>{schedule.kpis.makespan}</strong>
+              <span>makespan</span>
+            </div>
+            <div>
+              <strong>{schedule.kpis.lateOrders}</strong>
+              <span>late orders</span>
+            </div>
+            <div>
+              <strong>{schedule.kpis.totalTardiness}</strong>
+              <span>tardiness</span>
+            </div>
+          </div>
+          {schedule.violations.length > 0 && (
+            <ul className="violation-list">
+              {schedule.violations.map((violation) => (
+                <li key={violation}>{violation}</li>
+              ))}
+            </ul>
+          )}
+          <ol className="operation-list">
+            {schedule.operations.map((operation) => (
+              <li key={operation.id}>
+                <strong>{operation.nodeId}</strong>
+                <span>
+                  {operation.start} → {operation.end} · {operation.quantity}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+    </div>
+  );
 }

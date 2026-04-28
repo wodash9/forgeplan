@@ -25,6 +25,20 @@ describe('ForgePlan visual plant editor', () => {
     expect(screen.getByRole('heading', { name: 'Mixer 2' })).toBeInTheDocument();
   });
 
+  it('runs a mock solve and shows schedule feedback', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Run mock solve' }));
+
+    expect(screen.getByLabelText('Solve feedback')).toHaveTextContent('feasible');
+    expect(screen.getByText('makespan')).toBeInTheDocument();
+    expect(screen.getByText('late orders')).toBeInTheDocument();
+    expect(screen.getByText('tardiness')).toBeInTheDocument();
+    expect(screen.getByText('node_mixer')).toBeInTheDocument();
+    expect(screen.getByText(/0 → 30/)).toBeInTheDocument();
+  });
+
   it('edits the selected node name and capacity', async () => {
     const user = userEvent.setup();
     render(<App />);

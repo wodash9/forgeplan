@@ -2,7 +2,7 @@
 
 ForgePlan is a local-first platform for modeling production plants, validating feasibility, and eventually optimizing production schedules.
 
-This repository currently contains the local-first ForgePlan foundation through **Phase 4.0: Solver IR + Mock Solver**.
+This repository currently contains the local-first ForgePlan foundation through **Phase 4.1: UI Solve Feedback**.
 
 ## Current scope
 
@@ -17,6 +17,7 @@ Included:
 - React Flow / XYFlow node canvas
 - solver IR for scheduling model translation
 - deterministic mock solver adapter
+- UI solve feedback with mock schedule KPIs
 - minimal valid/invalid JSON fixtures
 - unit tests
 
@@ -53,6 +54,7 @@ Specs live in Etharlia:
 - `wiki/development/forgeplan/forgeplan-3-0-visual-plant-editor-mvp.md`
 - `wiki/development/forgeplan/forgeplan-3-1-react-flow-node-canvas.md`
 - `wiki/development/forgeplan/forgeplan-4-0-solver-ir-mock-solver.md`
+- `wiki/development/forgeplan/forgeplan-4-1-ui-solve-feedback.md`
 
 ## Local store
 
@@ -82,6 +84,8 @@ npm run dev
 
 The current editor uses React Flow / XYFlow for the node canvas, edges, selection, pan/zoom controls, and node dragging while keeping the canonical ForgePlan `Plant` model as the source of truth.
 
+Use **Run mock solve** to build a local solver model, run the deterministic mock solver, and preview status, KPIs, violations, and scheduled operations. This is UI plumbing only; it is not real optimization yet.
+
 ## Next phase candidate
 
-ForgePlan 5.0 — OR-Tools CP-SAT local adapter, or ForgePlan 4.1 — connect the visual editor to solver IR/mock solve feedback.
+ForgePlan 5.0 — OR-Tools CP-SAT local adapter, or ForgePlan 4.2 — richer schedule/Gantt visualization before adding the real solver.
