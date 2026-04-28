@@ -11,14 +11,15 @@ Included:
 - TypeScript domain types
 - Zod schemas
 - plant validation helpers
+- SQLite local store using `node:sqlite`
+- append-only event log
 - minimal valid/invalid JSON fixtures
 - unit tests
 
 Not included yet:
 
 - frontend
-- local API
-- SQLite persistence
+- local HTTP API
 - real solver
 - CP-SAT
 - networking/cloud
@@ -44,6 +45,18 @@ Specs live in Etharlia:
 - `wiki/projects/forgeplan.md`
 - `wiki/development/forgeplan/forgeplan-1-0-domain-kernel-local-fixture.md`
 
+## Local store
+
+`ForgePlanLocalStore` persists plants, scenarios, schedules, and events in a local SQLite database.
+
+Current tables:
+
+- `metadata`
+- `plants`
+- `scenarios`
+- `schedules`
+- `events`
+
 ## Next phase candidate
 
-ForgePlan 2.0 — Local persistence with SQLite and event log.
+ForgePlan 3.0 — Visual plant editor MVP or local API boundary.
