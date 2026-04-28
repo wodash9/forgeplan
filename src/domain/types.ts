@@ -78,7 +78,7 @@ export interface Scenario {
   solverSettings: SolverSettings;
 }
 
-export type SolverStrategy = 'mock' | 'heuristic' | 'decomposed' | 'monolithic' | 'lexicographic';
+export type SolverStrategy = 'mock' | 'cp_sat' | 'heuristic' | 'decomposed' | 'monolithic' | 'lexicographic';
 
 export interface SolverSettings {
   strategy: SolverStrategy;

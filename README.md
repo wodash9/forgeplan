@@ -2,7 +2,7 @@
 
 ForgePlan is a local-first platform for modeling production plants, validating feasibility, and eventually optimizing production schedules.
 
-This repository currently contains the local-first ForgePlan foundation through **Phase 4.2: Schedule/Gantt Visualization**.
+This repository currently contains the local-first ForgePlan foundation through **Phase 5.0: OR-Tools CP-SAT Local Adapter**.
 
 ## Current scope
 
@@ -19,6 +19,7 @@ Included:
 - deterministic mock solver adapter
 - UI solve feedback with mock schedule KPIs
 - simple Gantt/timeline schedule visualization
+- local OR-Tools CP-SAT adapter for Node/Python environments
 - minimal valid/invalid JSON fixtures
 - unit tests
 
@@ -26,8 +27,8 @@ Not included yet:
 
 - advanced custom node asset library
 - local HTTP API
-- real external solver
-- CP-SAT
+- CP-SAT integration in the web UI
+- advanced CP-SAT production features such as setups, batching, alternate machines, calendars, and cumulative capacity
 - networking/cloud
 
 ## Commands
@@ -57,6 +58,7 @@ Specs live in Etharlia:
 - `wiki/development/forgeplan/forgeplan-4-0-solver-ir-mock-solver.md`
 - `wiki/development/forgeplan/forgeplan-4-1-ui-solve-feedback.md`
 - `wiki/development/forgeplan/forgeplan-4-2-schedule-gantt-visualization.md`
+- `wiki/development/forgeplan/forgeplan-5-0-ortools-cp-sat-local-adapter.md`
 
 ## Local store
 
@@ -76,6 +78,8 @@ ForgePlan translates canonical `Plant + Scenario` data into a solver-neutral `So
 
 The `MockSolverAdapter` creates deterministic feasible/infeasible schedules for integration tests and UI plumbing. It does not optimize and should not be used for production decisions.
 
+Node-only solver integrations live behind separate imports so the browser bundle stays clean. `OrToolsCpSatAdapter` runs a local Python OR-Tools CP-SAT worker through stdin/stdout JSON and supports fixed-resource operations, no-overlap, route precedences, horizon, and makespan minimization. It fails explicitly when Python or OR-Tools is unavailable; this repository does not install OR-Tools automatically.
+
 ## Web editor
 
 Run the local visual editor:
@@ -90,4 +94,4 @@ Use **Run mock solve** to build a local solver model, run the deterministic mock
 
 ## Next phase candidate
 
-ForgePlan 5.0 — OR-Tools CP-SAT local adapter, or ForgePlan 4.3 — schedule persistence/export before adding the real solver.
+ForgePlan 5.1 — CP-SAT solve command/API boundary, or ForgePlan 5.2 — richer CP-SAT model features such as setup times, alternate machines, batching, and cumulative capacity.
