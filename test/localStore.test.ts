@@ -93,6 +93,42 @@ describe('ForgePlanLocalStore', () => {
     ]);
   });
 
+  it('exports and imports plant JSON through the SQLite-backed store', () => {
+    const plant = readPlantFixture('minimal-valid-plant.json');
+
+    store.importPlantJson(JSON.stringify(plant, null, 2));
+
+    expect(store.getPlant(plant.id)).toEqual(plant);
+    expect(JSON.parse(store.exportPlantJson(plant.id))).toEqual(plant);
+    expect(store.listEvents().map((event) => event.type)).toContain('plant.imported');
+    expect(store.listEvents().map((event) => event.type)).toContain('plant.exported');
+  });
+
+  it('normalizes schema defaults before persisting imported plant JSON in SQLite', () => {
+    const plant = readPlantFixture('minimal-valid-plant.json');
+    const jsonWithoutDefaults = JSON.stringify({
+      ...plant,
+      materials: plant.materials.map(({ compatibilityTags: _compatibilityTags, ...material }) => material),
+      nodes: plant.nodes.map(({ metadata: _metadata, ...node }) => node),
+      connections: plant.connections.map(({ enabled: _enabled, ...connection }) => connection),
+      orders: plant.orders.map(({ priority: _priority, ...order }) => order),
+    });
+
+    const imported = store.importPlantJson(jsonWithoutDefaults);
+    const persisted = store.getPlant(plant.id);
+
+    expect(imported.connections[0]?.enabled).toBe(true);
+    expect(imported.orders[0]?.priority).toBe(1);
+    expect(imported.nodes[0]?.metadata).toEqual({});
+    expect(imported.materials[0]?.compatibilityTags).toEqual([]);
+    expect(persisted).toEqual(imported);
+  });
+
+  it('rejects malformed plant JSON imports in the SQLite-backed store', () => {
+    expect(() => store.importPlantJson('{bad json')).toThrow(/Invalid JSON/);
+    expect(() => store.importPlantJson(JSON.stringify({ id: 'broken', nodes: [] }))).toThrow(StoreValidationError);
+  });
+
   it('records append-only events in creation order', () => {
     const plant = readPlantFixture('minimal-valid-plant.json');
     const scenario = createScenario(plant);

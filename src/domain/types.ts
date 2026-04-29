@@ -11,7 +11,8 @@ export type NodeType =
   | 'line'
   | 'packaging'
   | 'dispatch'
-  | 'sink';
+  | 'sink'
+  | 'custom';
 
 export interface Position {
   x: number;
@@ -45,6 +46,7 @@ export interface Connection {
   capacity?: number | undefined;
   transportTime?: number | undefined;
   enabled: boolean;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface Order {

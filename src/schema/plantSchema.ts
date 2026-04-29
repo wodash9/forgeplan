@@ -14,6 +14,7 @@ export const nodeTypeSchema = z.enum([
   'packaging',
   'dispatch',
   'sink',
+  'custom',
 ]);
 
 export const positionSchema = z.object({
@@ -48,6 +49,7 @@ export const connectionSchema = z.object({
   capacity: z.number().positive().optional(),
   transportTime: z.number().nonnegative().optional(),
   enabled: z.boolean().default(true),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export const orderSchema = z.object({

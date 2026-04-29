@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 
 import type { Plant, Scenario, Schedule, ValidationIssue } from '../domain/types.js';
-import { scenarioSchema } from '../schema/plantSchema.js';
+import { plantSchema, scenarioSchema } from '../schema/plantSchema.js';
 import { validatePlant } from '../validation/validatePlant.js';
 
 const require = createRequire(import.meta.url);
@@ -94,7 +94,7 @@ export class ForgePlanLocalStore {
       throw new StoreValidationError('Plant is not ready for persistence.', validation.issues);
     }
 
-    const plant = input as Plant;
+    const plant = plantSchema.parse(input) as Plant;
     const existing = this.db.prepare('select created_at from plants where id = ?').get(plant.id) as { created_at: string } | undefined;
     const now = new Date().toISOString();
     const createdAt = existing?.created_at ?? now;
@@ -129,6 +129,26 @@ export class ForgePlanLocalStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
+  }
+
+  exportPlantJson(id: string): string {
+    const plant = this.getPlant(id);
+    if (!plant) throw new Error(`Cannot export plant ${id}: plant does not exist.`);
+    this.appendEvent('plant.exported', 'plant', id, { name: plant.name, version: plant.version });
+    return JSON.stringify(plant, null, 2);
+  }
+
+  importPlantJson(json: string): Plant {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch (error) {
+      throw new Error(`Invalid JSON: ${(error as Error).message}`);
+    }
+
+    const plant = this.savePlant(parsed);
+    this.appendEvent('plant.imported', 'plant', plant.id, { name: plant.name, version: plant.version });
+    return plant;
   }
 
   saveScenario(input: unknown): Scenario {

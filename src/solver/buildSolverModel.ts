@@ -1,7 +1,7 @@
 import type { Connection, Plant, PlantNode, Scenario } from '../domain/types.js';
 import type { SolverModel, SolverObjective, SolverOperation, SolverPrecedence, SolverResource } from './types.js';
 
-const PROCESSING_NODE_TYPES = new Set<PlantNode['type']>(['machine', 'mixer', 'reactor', 'line', 'packaging']);
+const PROCESSING_NODE_TYPES = new Set<PlantNode['type']>(['machine', 'mixer', 'reactor', 'line', 'packaging', 'custom']);
 
 export interface BuildSolverModelOptions {
   objective?: SolverObjective | undefined;
