@@ -1,5 +1,7 @@
 # ForgePlan CP-SAT V1
 
+> Historical note: this document describes the first generic CP-SAT adapter. The current PFG production layer is documented in `docs/solver-pfg-cpsat-v2.md`.
+
 ForgePlan now has a first local CP-SAT integration through Google OR-Tools. The integration keeps the product local-first: the TypeScript domain builds a Solver IR, the Node boundary sends it to a local Python OR-Tools worker through stdin/stdout, and the result comes back as a ForgePlan `Schedule` for the API, CLI, storage and Gantt layer.
 
 ## Sources used for constraints

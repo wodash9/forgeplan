@@ -11,6 +11,7 @@ import {
   validateSolverModel,
   type SolverModel,
 } from '../src/index.js';
+import { createDemoPlant } from '../src/app/demoPlant.js';
 import { OrToolsCpSatAdapter } from '../src/solver/node.js';
 
 function readFixture(name: string): unknown {
@@ -86,6 +87,70 @@ describe('ForgePlan solver IR', () => {
     expect(result.status).toBe('infeasible');
     expect(result.schedule.status).toBe('infeasible');
     expect(result.schedule.violations[0]).toContain('exceeds horizon');
+  });
+
+  it('builds a PFG constraint model from the default plant documented in Obsidian', () => {
+    const plant = createDemoPlant();
+    const scenario = createScenario(plant, { solverSettings: { strategy: 'cp_sat', timeLimitSeconds: 30, workers: 2 } });
+    const model = buildSolverModel(plant, scenario, { objective: 'minimize_total_tardiness' });
+
+    expect(model.pfgFlow).toBeDefined();
+    expect(model.pfgFlow?.dosingLevels).toBe(5);
+    expect(model.pfgFlow?.batchSize).toBe(120);
+    expect(model.pfgFlow?.intermediateSilos).toHaveLength(4);
+    expect(model.pfgFlow?.granulators).toHaveLength(2);
+    expect(model.pfgFlow?.finalSilos).toHaveLength(3);
+    expect(model.pfgFlow?.dispatchLines).toHaveLength(2);
+    expect(model.pfgFlow?.batches.map((batch) => batch.orderId)).toEqual(['order_1', 'order_2']);
+    expect(model.pfgFlow?.dosingLineToIntermediateSilos).toHaveLength(4);
+    expect(model.pfgFlow?.constraintCoverage).toEqual([
+      'batch_splitting',
+      'dosing_phase_precedence',
+      'dosing_level_no_overlap',
+      'within_order_batch_symmetry',
+      'dosing_changeover',
+      'intermediate_silo_assignment',
+      'intermediate_silo_no_mixing',
+      'intermediate_inventory_reservoir',
+      'granulator_assignment',
+      'granulator_no_overlap',
+      'granulator_changeover',
+      'final_silo_assignment',
+      'final_silo_no_mixing',
+      'final_inventory_reservoir',
+      'dispatch_assignment',
+      'dispatch_no_overlap',
+      'dispatch_changeover',
+      'tardiness_late_orders_makespan',
+      'on_time_implication_cuts',
+      'due_date_capacity_cuts',
+      'restricted_due_dominance',
+    ]);
+  });
+
+  it('keeps direct dosing-to-intermediate transport arcs in the PFG model', () => {
+    const plant = {
+      ...createDemoPlant(),
+      connections: createDemoPlant().connections.filter((connection) => connection.id !== 'conn_ld_si4'),
+    };
+    const scenario = createScenario(plant);
+    const model = buildSolverModel(plant, scenario, { objective: 'minimize_total_tardiness' });
+
+    expect(model.pfgFlow?.dosingLineToIntermediateSilos).toHaveLength(3);
+    expect(model.pfgFlow?.dosingLineToIntermediateSilos.map((connection) => connection.targetNodeId)).not.toContain('node_intermediate_silo_4');
+  });
+
+  it('splits PFG orders into dosing batches using the documented batch-size constraint', () => {
+    const plant = { ...createDemoPlant(), orders: [{ ...createDemoPlant().orders[0]!, quantity: 250, minStartQuantity: 130 }] };
+    const scenario = createScenario(plant);
+    const model = buildSolverModel(plant, scenario, { objective: 'minimize_total_tardiness' });
+
+    expect(model.pfgFlow?.batches).toEqual([
+      { id: 'batch_order_1_1', orderId: 'order_1', materialId: 'mat_feed', index: 1, quantity: 120 },
+      { id: 'batch_order_1_2', orderId: 'order_1', materialId: 'mat_feed', index: 2, quantity: 120 },
+      { id: 'batch_order_1_3', orderId: 'order_1', materialId: 'mat_feed', index: 3, quantity: 10 },
+    ]);
+    expect(model.pfgFlow?.orderRequirements[0]).toMatchObject({ orderId: 'order_1', minStartQuantity: 130 });
   });
 
   it('passes CP-SAT runtime options to the local Python worker boundary', () => {

@@ -2,7 +2,7 @@
 
 ForgePlan is a local-first platform for modeling production plants, validating feasibility, and eventually optimizing production schedules.
 
-This repository currently contains the local-first ForgePlan foundation through **Phase 6: Local Planner Backend + CP-SAT V1**.
+This repository currently contains the local-first ForgePlan foundation through **Phase 7: PFG CP-SAT production solver V2**.
 
 ## Current scope
 
@@ -20,6 +20,7 @@ Included:
 - UI solve feedback with mock schedule KPIs
 - simple Gantt/timeline schedule visualization
 - local OR-Tools CP-SAT adapter for Node/Python environments
+- PFG/OptiPlan CP-SAT production layer with batching, dosing levels, silos, inventory reservoirs, granulator assignment, final storage and dispatch constraints
 - local solve CLI boundary for mock/CP-SAT schedules
 - local HTTP API backed by SQLite for plants, scenarios, schedules, events and solve requests
 - product catalog with simple BOM/dependency graph
@@ -31,7 +32,7 @@ Not included yet:
 
 - advanced custom node asset library
 - CP-SAT integration in the web UI
-- advanced CP-SAT production features such as setups, batching, alternate machines, calendars, and cumulative capacity
+- fully decomposed/warm-start/true multi-pass lexicographic solver pipeline
 - networking/cloud
 
 ## Commands
@@ -82,7 +83,7 @@ ForgePlan translates canonical `Plant + Scenario` data into a solver-neutral `So
 
 The `MockSolverAdapter` creates deterministic feasible/infeasible schedules for integration tests and UI plumbing. It does not optimize and should not be used for production decisions.
 
-Node-only solver integrations live behind separate imports so the browser bundle stays clean. `OrToolsCpSatAdapter` runs a local Python OR-Tools CP-SAT worker through stdin/stdout JSON and supports fixed-resource operations, no-overlap, route precedences, earliest starts, due-date tardiness KPIs, horizon, and a weighted late/tardiness/makespan objective. It fails explicitly when Python or OR-Tools is unavailable; this repository does not install OR-Tools automatically. See `docs/solver-cpsat-v1.md` for the PFG/OptiPlan constraints covered in V1 and the layers still pending.
+Node-only solver integrations live behind separate imports so the browser bundle stays clean. `OrToolsCpSatAdapter` runs a local Python OR-Tools CP-SAT worker through stdin/stdout JSON. For generic plants it supports fixed-resource operations, no-overlap, route precedences, earliest starts, due-date tardiness KPIs, horizon, and a weighted late/tardiness/makespan objective. For PFG plants with `metadata.pfgStage`, it switches to the richer PFG/OptiPlan layer covering batch splitting, multi-level dosing, intermediate/final silo assignment, event-based inventory reservoirs, granulator assignment, dispatch assignment, sequence-dependent setup/changeover delays, due-date cuts and restricted due-dominance symmetry. It fails explicitly when Python or OR-Tools is unavailable; this repository does not install OR-Tools automatically. See `docs/solver-pfg-cpsat-v2.md` for the implemented PFG constraints and modeling assumptions.
 
 Run a local solve from a built checkout:
 
@@ -126,4 +127,4 @@ Use **Run mock solve** to build a local solver model, run the deterministic mock
 
 ## Next phase candidate
 
-ForgePlan next solver layers — connect CP-SAT strategy selection to the web UI, then add PFG/OptiPlan production constraints incrementally: batching/lots, setup times, silo assignment/inventory reservoirs, alternate machines and decomposed/lexicographic solving.
+ForgePlan next solver layers — connect CP-SAT strategy selection to the web UI, then harden the production solver with decomposed baseline, warm-start hints, true multi-pass lexicographic solving, calendars/maintenance windows and larger benchmark instances.
