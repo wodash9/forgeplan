@@ -701,7 +701,7 @@ function nextNodeNumber(nodes: PlantNode[], idPrefix: string): number {
 export default function App() {
   const [plant, setPlant] = useState<Plant>(() => createDemoPlant());
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>('plant');
-  const [selectedNodeId, setSelectedNodeId] = useState('node_mixer');
+  const [selectedNodeId, setSelectedNodeId] = useState('node_dosing_line');
   const [propertiesNodeId, setPropertiesNodeId] = useState<string | null>(null);
   const [propertiesConnectionId, setPropertiesConnectionId] = useState<string | null>(null);
   const [creatingCustomNode, setCreatingCustomNode] = useState(false);
@@ -1344,14 +1344,12 @@ function handleStyle(anchor: PerimeterAnchor) {
 
 function EquipmentFlowNode({ id, data, selected }: NodeProps<Node<FlowNodeData>>) {
   const baseVisual = equipmentVisuals[data.nodeType];
-  const visual: EquipmentVisual = data.nodeType === 'custom'
-    ? {
-        ...baseVisual,
-        title: data.customTypeName || baseVisual.title,
-        detail: data.customTypeName || baseVisual.detail,
-        isaTag: data.isaTag || baseVisual.isaTag,
-      }
-    : baseVisual;
+  const visual: EquipmentVisual = {
+    ...baseVisual,
+    title: data.nodeType === 'custom' ? data.customTypeName || baseVisual.title : baseVisual.title,
+    detail: data.nodeType === 'custom' ? data.customTypeName || baseVisual.detail : baseVisual.detail,
+    isaTag: data.isaTag || baseVisual.isaTag,
+  };
   return (
     <div
       className={`iso-equipment-node ${selected ? 'selected' : ''}`}

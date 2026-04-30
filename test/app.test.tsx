@@ -21,27 +21,63 @@ import App, {
   syncPlantNodePositions,
 } from '../src/app/App.js';
 import { createDemoPlant } from '../src/app/demoPlant.js';
+import { validatePlant } from '../src/validation/validatePlant.js';
 
 describe('ForgePlan visual plant editor', () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
 
+  it('uses the PFG production plant from the PDF as the default model', () => {
+    const plant = createDemoPlant();
+    const nodeIds = plant.nodes.map((node) => node.id);
+    const connectionPairs = plant.connections.map((connection) => `${connection.sourceNodeId}->${connection.targetNodeId}`);
+
+    expect(plant.name).toBe('PFG Feed Production Plant');
+    expect(nodeIds).toEqual(expect.arrayContaining([
+      'node_raw_supply',
+      'node_dosing_line',
+      'node_intermediate_silo_1',
+      'node_intermediate_silo_4',
+      'node_granulation_line_1',
+      'node_granulation_line_2',
+      'node_final_silo_1',
+      'node_final_silo_3',
+      'node_expedition_line_1',
+      'node_expedition_line_2',
+    ]));
+    expect(plant.nodes.find((node) => node.id === 'node_dosing_line')).toMatchObject({
+      name: 'Línia Dosificació LD',
+      type: 'line',
+      productionMode: 'batch',
+      metadata: expect.objectContaining({ pfgStage: 'dosification' }),
+    });
+    expect(plant.nodes.find((node) => node.id === 'node_granulation_line_1')).toMatchObject({ productionMode: 'continuous' });
+    expect(connectionPairs).toEqual(expect.arrayContaining([
+      'node_dosing_line->node_intermediate_silo_1',
+      'node_intermediate_silo_1->node_granulation_line_1',
+      'node_granulation_line_1->node_final_silo_1',
+      'node_final_silo_1->node_expedition_line_1',
+    ]));
+    expect(validatePlant(plant).status).toBe('ready');
+  });
+
   it('renders each node as the ISO-style equipment symbol itself instead of a square card with an icon inside', () => {
     render(<App />);
 
     expect(screen.getByRole('heading', { name: 'Visual Plant Editor MVP' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'ForgePlan Demo Plant' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'PFG Feed Production Plant' })).toBeInTheDocument();
     expect(screen.getByText('ready')).toBeInTheDocument();
     expect(screen.getByTestId('forgeplan-flow-canvas')).toBeInTheDocument();
-    const mixerNode = screen.getByLabelText('Mixer 1 mixer equipment node');
-    expect(mixerNode).toBeInTheDocument();
-    expect(mixerNode).not.toHaveClass('nodrag');
-    expect(mixerNode).not.toHaveClass('equipment-node-card');
-    expect(mixerNode).toHaveClass('iso-equipment-node');
-    expect(mixerNode).toHaveAttribute('data-iso-symbol', 'mixer');
-    expect(mixerNode.querySelector('.equipment-card-shell')).not.toBeInTheDocument();
-    expect(mixerNode.querySelector('svg.iso-equipment-symbol')).toBeInTheDocument();
+    const dosingLineNode = screen.getByLabelText('Línia Dosificació LD line equipment node');
+    expect(dosingLineNode).toBeInTheDocument();
+    expect(dosingLineNode).toHaveClass('selected');
+    expect(dosingLineNode).not.toHaveClass('nodrag');
+    expect(dosingLineNode).not.toHaveClass('equipment-node-card');
+    expect(dosingLineNode).toHaveClass('iso-equipment-node');
+    expect(dosingLineNode).toHaveAttribute('data-iso-symbol', 'line');
+    expect(dosingLineNode.querySelector('.equipment-card-shell')).not.toBeInTheDocument();
+    expect(dosingLineNode.querySelector('svg.iso-equipment-symbol')).toBeInTheDocument();
     expect(screen.getByText(/ISA-5\.1-style instrumentation tags/)).toBeInTheDocument();
     expect(screen.getByText(/ISO 10628-style equipment/)).toBeInTheDocument();
   });
@@ -49,12 +85,12 @@ describe('ForgePlan visual plant editor', () => {
   it('adds ISA-style tag bubbles to equipment symbols without copying protected standard charts', () => {
     render(<App />);
 
-    const mixerNode = screen.getByLabelText('Mixer 1 mixer equipment node');
-    const tagBubble = mixerNode.querySelector('.isa-tag-bubble');
+    const dosingLineNode = screen.getByLabelText('Línia Dosificació LD line equipment node');
+    const tagBubble = dosingLineNode.querySelector('.isa-tag-bubble');
 
     expect(tagBubble).toBeInTheDocument();
-    expect(tagBubble?.querySelector('text')).toHaveTextContent('MIX');
-    expect(mixerNode.querySelector('svg.iso-equipment-symbol')).toHaveAttribute(
+    expect(tagBubble?.querySelector('text')).toHaveTextContent('LD');
+    expect(dosingLineNode.querySelector('svg.iso-equipment-symbol')).toHaveAttribute(
       'aria-label',
       expect.stringContaining('ISA-5.1-style instrumentation tag'),
     );
@@ -82,7 +118,7 @@ describe('ForgePlan visual plant editor', () => {
     await user.click(screen.getByRole('button', { name: 'Create node' }));
 
     expect(screen.getByLabelText('CIP Skid custom equipment node')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('15')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Open CIP Skid properties' }));
     expect(screen.getByRole('dialog', { name: 'CIP Skid properties' })).toBeInTheDocument();
     expect(screen.getByLabelText('Custom equipment class')).toHaveValue('CIP skid');
@@ -220,11 +256,11 @@ describe('ForgePlan visual plant editor', () => {
 
   it('tracks continuous and batch production mode on processing equipment', async () => {
     const plant = createDemoPlant();
-    const mixer = plant.nodes.find((node) => node.id === 'node_mixer');
-    const flowNodes = buildEquipmentFlowNodes(plant, 'node_mixer', () => undefined);
+    const mixer = plant.nodes.find((node) => node.id === 'node_dosing_line');
+    const flowNodes = buildEquipmentFlowNodes(plant, 'node_dosing_line', () => undefined);
 
     expect(mixer?.productionMode).toBe('batch');
-    expect(flowNodes.find((node) => node.id === 'node_mixer')?.data).toMatchObject({
+    expect(flowNodes.find((node) => node.id === 'node_dosing_line')?.data).toMatchObject({
       productionMode: 'batch',
       productionModeLabel: 'Batch production',
     });
@@ -232,21 +268,21 @@ describe('ForgePlan visual plant editor', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'Open Mixer 1 properties' }));
+    await user.click(screen.getByRole('button', { name: 'Open Línia Dosificació LD properties' }));
     expect(screen.getByLabelText('Production mode')).toHaveValue('batch');
 
     await user.selectOptions(screen.getByLabelText('Production mode'), 'continuous');
 
     expect(screen.getByLabelText('Production mode')).toHaveValue('continuous');
-    expect(screen.getByLabelText('Mixer 1 mixer equipment node')).toHaveTextContent('Continuous production');
+    expect(screen.getByLabelText('Línia Dosificació LD line equipment node')).toHaveTextContent('Continuous production');
   });
 
   it('keeps controlled React Flow nodes initialized with stable measured dimensions during fast drags', () => {
-    const flowNodes = buildEquipmentFlowNodes(createDemoPlant(), 'node_mixer', () => undefined);
+    const flowNodes = buildEquipmentFlowNodes(createDemoPlant(), 'node_dosing_line', () => undefined);
 
-    expect(flowNodes).toHaveLength(3);
+    expect(flowNodes).toHaveLength(14);
     expect(flowNodes.every((node) => node.measured?.width && node.measured.height)).toBe(true);
-    expect(flowNodes.find((node) => node.id === 'node_mixer')?.measured).toEqual({ width: 136, height: 146 });
+    expect(flowNodes.find((node) => node.id === 'node_dosing_line')?.measured).toEqual({ width: 136, height: 146 });
     expect(plantNodeDragExtent).toEqual([[-10_000, -10_000], [10_000, 10_000]]);
   });
 
@@ -265,62 +301,62 @@ describe('ForgePlan visual plant editor', () => {
   it('updates plant node positions during drag changes so controlled React Flow nodes visibly follow the pointer', () => {
     const plant = createDemoPlant();
 
-    const moved = movePlantNode(plant, 'node_mixer', { x: 380, y: 210 });
+    const moved = movePlantNode(plant, 'node_dosing_line', { x: 380, y: 210 });
     const liveChanged = syncPlantNodePositions(plant, [
-      { id: 'node_mixer', type: 'position', position: { x: 421, y: 222 }, dragging: true },
+      { id: 'node_dosing_line', type: 'position', position: { x: 421, y: 222 }, dragging: true },
     ]);
 
-    expect(moved.nodes.find((node) => node.id === 'node_mixer')?.position).toEqual({ x: 380, y: 210 });
-    expect(liveChanged.nodes.find((node) => node.id === 'node_mixer')?.position).toEqual({ x: 421, y: 222 });
-    expect(plant.nodes.find((node) => node.id === 'node_mixer')?.position).toEqual({ x: 300, y: 140 });
+    expect(moved.nodes.find((node) => node.id === 'node_dosing_line')?.position).toEqual({ x: 380, y: 210 });
+    expect(liveChanged.nodes.find((node) => node.id === 'node_dosing_line')?.position).toEqual({ x: 421, y: 222 });
+    expect(plant.nodes.find((node) => node.id === 'node_dosing_line')?.position).toEqual({ x: 260, y: 280 });
   });
 
   it('keeps the final position when many drag updates arrive quickly', () => {
     const plant = createDemoPlant();
 
     const rapidDrag = syncPlantNodePositions(plant, [
-      { id: 'node_mixer', type: 'position', position: { x: 318, y: 151 }, dragging: true },
-      { id: 'node_mixer', type: 'position', position: { x: 390, y: 210 }, dragging: true },
-      { id: 'node_mixer', type: 'position', position: { x: 512, y: 284 }, dragging: true },
+      { id: 'node_dosing_line', type: 'position', position: { x: 318, y: 151 }, dragging: true },
+      { id: 'node_dosing_line', type: 'position', position: { x: 390, y: 210 }, dragging: true },
+      { id: 'node_dosing_line', type: 'position', position: { x: 512, y: 284 }, dragging: true },
     ]);
 
-    expect(rapidDrag.nodes.find((node) => node.id === 'node_mixer')?.position).toEqual({ x: 512, y: 284 });
+    expect(rapidDrag.nodes.find((node) => node.id === 'node_dosing_line')?.position).toEqual({ x: 512, y: 284 });
   });
 
   it('keeps every pending node final position when drag changes are batched before the next frame', () => {
     const merged = mergePositionChanges(
       [
-        { id: 'node_source', type: 'position', position: { x: 90, y: 150 }, dragging: true },
-        { id: 'node_mixer', type: 'position', position: { x: 330, y: 170 }, dragging: true },
+        { id: 'node_raw_supply', type: 'position', position: { x: 90, y: 150 }, dragging: true },
+        { id: 'node_dosing_line', type: 'position', position: { x: 330, y: 170 }, dragging: true },
       ],
       [
-        { id: 'node_mixer', type: 'position', position: { x: 512, y: 284 }, dragging: true },
-        { id: 'node_dispatch', type: 'position', position: { x: 620, y: 190 }, dragging: true },
+        { id: 'node_dosing_line', type: 'position', position: { x: 512, y: 284 }, dragging: true },
+        { id: 'node_truck_pickup', type: 'position', position: { x: 620, y: 190 }, dragging: true },
       ],
     );
 
     expect(merged).toEqual([
-      { id: 'node_source', type: 'position', position: { x: 90, y: 150 }, dragging: true },
-      { id: 'node_mixer', type: 'position', position: { x: 512, y: 284 }, dragging: true },
-      { id: 'node_dispatch', type: 'position', position: { x: 620, y: 190 }, dragging: true },
+      { id: 'node_raw_supply', type: 'position', position: { x: 90, y: 150 }, dragging: true },
+      { id: 'node_dosing_line', type: 'position', position: { x: 512, y: 284 }, dragging: true },
+      { id: 'node_truck_pickup', type: 'position', position: { x: 620, y: 190 }, dragging: true },
     ]);
   });
 
   it('exposes dense perimeter connection hotspots without rendering persistent visible circles', () => {
     render(<App />);
 
-    const mixerNode = screen.getByLabelText('Mixer 1 mixer equipment node');
-    const middleRightSource = mixerNode.querySelector('[data-handleid="right-50-source"]');
+    const dosingLineNode = screen.getByLabelText('Línia Dosificació LD line equipment node');
+    const middleRightSource = dosingLineNode.querySelector('[data-handleid="right-50-source"]');
 
     expect(perimeterConnectionAnchors).toHaveLength(20);
-    expect(mixerNode.querySelectorAll('.iso-perimeter-handle.source')).toHaveLength(20);
-    expect(mixerNode.querySelectorAll('.iso-perimeter-handle.target')).toHaveLength(20);
-    expect(mixerNode.querySelector('[data-handleid="top-50-source"]')).toBeInTheDocument();
-    expect(mixerNode.querySelector('[data-handleid="right-85-source"]')).toBeInTheDocument();
-    expect(mixerNode.querySelector('[data-handleid="bottom-15-target"]')).toBeInTheDocument();
-    expect(mixerNode.querySelector('[data-handleid="left-68-target"]')).toBeInTheDocument();
-    expect(mixerNode.querySelector('.connection-perimeter-highlight')).toBeInTheDocument();
-    expect(mixerNode.querySelector('.connection-perimeter-highlight')).toHaveAttribute('aria-hidden', 'true');
+    expect(dosingLineNode.querySelectorAll('.iso-perimeter-handle.source')).toHaveLength(20);
+    expect(dosingLineNode.querySelectorAll('.iso-perimeter-handle.target')).toHaveLength(20);
+    expect(dosingLineNode.querySelector('[data-handleid="top-50-source"]')).toBeInTheDocument();
+    expect(dosingLineNode.querySelector('[data-handleid="right-85-source"]')).toBeInTheDocument();
+    expect(dosingLineNode.querySelector('[data-handleid="bottom-15-target"]')).toBeInTheDocument();
+    expect(dosingLineNode.querySelector('[data-handleid="left-68-target"]')).toBeInTheDocument();
+    expect(dosingLineNode.querySelector('.connection-perimeter-highlight')).toBeInTheDocument();
+    expect(dosingLineNode.querySelector('.connection-perimeter-highlight')).toHaveAttribute('aria-hidden', 'true');
     expect(middleRightSource).toHaveClass('connection-hotspot');
     expect(middleRightSource).toHaveClass('continuous-perimeter-hotspot');
     expect(middleRightSource).toHaveAttribute('aria-label', 'Connection hotspot right 50 source');
@@ -329,13 +365,13 @@ describe('ForgePlan visual plant editor', () => {
   it('shows separate visual affordances for selecting the node body versus creating connections on the perimeter', () => {
     render(<App />);
 
-    const mixerNode = screen.getByLabelText('Mixer 1 mixer equipment node');
-    const connectionHotspot = mixerNode.querySelector('[data-handleid="right-68-source"]');
+    const dosingLineNode = screen.getByLabelText('Línia Dosificació LD line equipment node');
+    const connectionHotspot = dosingLineNode.querySelector('[data-handleid="right-68-source"]');
 
-    expect(mixerNode).toHaveAttribute('data-interaction-mode', 'select-node');
-    expect(mixerNode.querySelector('.selection-mode-highlight')).toBeInTheDocument();
-    expect(mixerNode.querySelector('.select-mode-hint')).toHaveTextContent('Select / drag node');
-    expect(mixerNode.querySelector('.connection-mode-hint')).toHaveTextContent('Connect from perimeter');
+    expect(dosingLineNode).toHaveAttribute('data-interaction-mode', 'select-node');
+    expect(dosingLineNode.querySelector('.selection-mode-highlight')).toBeInTheDocument();
+    expect(dosingLineNode.querySelector('.select-mode-hint')).toHaveTextContent('Select / drag node');
+    expect(dosingLineNode.querySelector('.connection-mode-hint')).toHaveTextContent('Connect from perimeter');
     expect(connectionHotspot).toHaveAttribute('data-interaction-mode', 'connect-edge');
     expect(connectionHotspot).toHaveAttribute('title', 'Connect from right 68 source');
   });
@@ -343,41 +379,41 @@ describe('ForgePlan visual plant editor', () => {
   it('does not open node properties when clicking a perimeter handle to connect', () => {
     render(<App />);
 
-    const mixerNode = screen.getByLabelText('Mixer 1 mixer equipment node');
-    fireEvent.click(mixerNode.querySelector('[data-handleid="right-68-source"]')!);
+    const dosingLineNode = screen.getByLabelText('Línia Dosificació LD line equipment node');
+    fireEvent.click(dosingLineNode.querySelector('[data-handleid="right-68-source"]')!);
 
-    expect(screen.queryByRole('dialog', { name: 'Mixer 1 properties' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Línia Dosificació LD properties' })).not.toBeInTheDocument();
   });
 
   it('creates a new enabled plant connection from any dense perimeter point', () => {
     const plant = createDemoPlant();
 
     const connected = addPlantConnection(plant, {
-      source: 'node_source',
-      target: 'node_dispatch',
+      source: 'node_raw_supply',
+      target: 'node_truck_pickup',
       sourceHandle: 'bottom-68-source',
       targetHandle: 'top-32-target',
     });
 
     const newConnection = connected.connections.at(-1);
     expect(newConnection).toMatchObject({
-      sourceNodeId: 'node_source',
-      targetNodeId: 'node_dispatch',
+      sourceNodeId: 'node_raw_supply',
+      targetNodeId: 'node_truck_pickup',
       enabled: true,
       materialTypes: ['mat_feed'],
       capacity: 100,
       transportTime: 0,
     });
-    expect(newConnection?.id).toBe('conn_node_source_node_dispatch');
+    expect(newConnection?.id).toBe('conn_node_raw_supply_node_truck_pickup');
     expect(newConnection?.metadata).toMatchObject({ sourceHandle: 'bottom-68-source', targetHandle: 'top-32-target' });
   });
 
   it('moves existing connection endpoints around the node perimeter', () => {
     const plant = createDemoPlant();
 
-    const movedSource = movePlantConnectionEndpoint(plant, 'conn_mixer_dispatch', 'source', 'left-85-source');
-    const movedTarget = movePlantConnectionEndpoint(movedSource, 'conn_mixer_dispatch', 'target', 'right-32-target');
-    const connection = movedTarget.connections.find((item) => item.id === 'conn_mixer_dispatch');
+    const movedSource = movePlantConnectionEndpoint(plant, 'conn_le1_dispatch', 'source', 'left-85-source');
+    const movedTarget = movePlantConnectionEndpoint(movedSource, 'conn_le1_dispatch', 'target', 'right-32-target');
+    const connection = movedTarget.connections.find((item) => item.id === 'conn_le1_dispatch');
 
     expect(connection?.metadata).toMatchObject({ sourceHandle: 'left-85-source', targetHandle: 'right-32-target' });
   });
@@ -385,36 +421,36 @@ describe('ForgePlan visual plant editor', () => {
   it('reconnects an existing connection when an edge endpoint is dragged to another perimeter point', () => {
     const plant = createDemoPlant();
 
-    const reconnected = reconnectPlantConnection(plant, 'conn_mixer_dispatch', {
-      source: 'node_source',
-      target: 'node_dispatch',
+    const reconnected = reconnectPlantConnection(plant, 'conn_le1_dispatch', {
+      source: 'node_raw_supply',
+      target: 'node_truck_pickup',
       sourceHandle: 'left-68-source',
       targetHandle: 'right-32-target',
     });
-    const connection = reconnected.connections.find((item) => item.id === 'conn_mixer_dispatch');
+    const connection = reconnected.connections.find((item) => item.id === 'conn_le1_dispatch');
 
-    expect(connection).toMatchObject({ sourceNodeId: 'node_source', targetNodeId: 'node_dispatch' });
+    expect(connection).toMatchObject({ sourceNodeId: 'node_raw_supply', targetNodeId: 'node_truck_pickup' });
     expect(connection?.metadata).toMatchObject({ sourceHandle: 'left-68-source', targetHandle: 'right-32-target' });
-    expect(reconnectPlantConnection(plant, 'conn_mixer_dispatch', { source: 'node_source', target: 'node_source' })).toBe(plant);
+    expect(reconnectPlantConnection(plant, 'conn_le1_dispatch', { source: 'node_raw_supply', target: 'node_raw_supply' })).toBe(plant);
   });
 
   it('ignores invalid connection endpoints instead of creating broken edges', () => {
     const plant = createDemoPlant();
 
-    expect(addPlantConnection(plant, { source: 'node_missing', target: 'node_dispatch' })).toBe(plant);
-    expect(addPlantConnection(plant, { source: 'node_source', target: 'node_source' })).toBe(plant);
+    expect(addPlantConnection(plant, { source: 'node_missing', target: 'node_truck_pickup' })).toBe(plant);
+    expect(addPlantConnection(plant, { source: 'node_raw_supply', target: 'node_raw_supply' })).toBe(plant);
   });
 
   it('opens a connection properties popup and edits connection characteristics', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'Edit connection conn_mixer_dispatch' }));
+    await user.click(screen.getByRole('button', { name: 'Edit connection conn_le1_dispatch' }));
 
-    expect(screen.getByRole('dialog', { name: 'conn_mixer_dispatch connection properties' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'conn_le1_dispatch connection properties' })).toBeInTheDocument();
     expect(screen.getByLabelText('Material types')).toHaveValue('mat_feed');
-    expect(screen.getByLabelText('Connection capacity')).toHaveValue(100);
-    expect(screen.getByLabelText('Transport time')).toHaveValue(5);
+    expect(screen.getByLabelText('Connection capacity')).toHaveValue(120);
+    expect(screen.getByLabelText('Transport time')).toHaveValue(0);
 
     await user.clear(screen.getByLabelText('Material types'));
     await user.type(screen.getByLabelText('Material types'), 'mat_feed, mat_additive');
@@ -428,8 +464,8 @@ describe('ForgePlan visual plant editor', () => {
     expect(screen.getByDisplayValue('12')).toBeInTheDocument();
     expect(screen.getByLabelText('Source perimeter point')).toHaveValue('bottom-68-source');
     expect(screen.getByLabelText('Target perimeter point')).toHaveValue('top-32-target');
-    expect(screen.getByText('Source: node_mixer · bottom-68-source')).toBeInTheDocument();
-    expect(screen.getByText('Target: node_dispatch · top-32-target')).toBeInTheDocument();
+    expect(screen.getByText('Source: node_expedition_line_1 · bottom-68-source')).toBeInTheDocument();
+    expect(screen.getByText('Target: node_truck_pickup · top-32-target')).toBeInTheDocument();
     expect(screen.getByLabelText('Connection enabled')).not.toBeChecked();
   });
 
@@ -439,42 +475,42 @@ describe('ForgePlan visual plant editor', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add mixer' }));
 
-    expect(screen.getAllByText('Mixer 2').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('Mixer 2 mixer equipment node')).toBeInTheDocument();
+    expect(screen.getAllByText('Mixer 1').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Mixer 1 mixer equipment node')).toBeInTheDocument();
   });
 
   it('selects a node from the canvas without opening properties, and opens properties from the node action icon', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    fireEvent.click(screen.getByLabelText('Raw Input source equipment node'));
+    fireEvent.click(screen.getByLabelText('Raw material availability source equipment node'));
 
-    expect(screen.queryByRole('dialog', { name: 'Raw Input properties' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Raw Input' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Raw Input source equipment node')).toHaveClass('selected');
+    expect(screen.queryByRole('dialog', { name: 'Raw material availability properties' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Raw material availability' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Raw material availability source equipment node')).toHaveClass('selected');
 
-    await user.click(screen.getByRole('button', { name: 'Open Raw Input properties' }));
+    await user.click(screen.getByRole('button', { name: 'Open Raw material availability properties' }));
 
-    expect(screen.getByRole('dialog', { name: 'Raw Input properties' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Equipment name')).toHaveValue('Raw Input');
+    expect(screen.getByRole('dialog', { name: 'Raw material availability properties' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Equipment name')).toHaveValue('Raw material availability');
   });
 
   it('opens a properties popup from the node action icon and edits its characteristics', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'Open Mixer 1 properties' }));
+    await user.click(screen.getByRole('button', { name: 'Open Línia Dosificació LD properties' }));
 
-    expect(screen.getByRole('dialog', { name: 'Mixer 1 properties' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Equipment name')).toHaveValue('Mixer 1');
-    expect(screen.getByLabelText('Equipment type')).toHaveValue('mixer');
+    expect(screen.getByRole('dialog', { name: 'Línia Dosificació LD properties' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Equipment name')).toHaveValue('Línia Dosificació LD');
+    expect(screen.getByLabelText('Equipment type')).toHaveValue('line');
 
     await user.clear(screen.getByLabelText('Equipment name'));
     await user.type(screen.getByLabelText('Equipment name'), 'Granuladora principal');
     await user.clear(screen.getByLabelText('Capacity'));
     await user.type(screen.getByLabelText('Capacity'), '175');
 
-    expect(screen.getByLabelText('Granuladora principal mixer equipment node')).toBeInTheDocument();
+    expect(screen.getByLabelText('Granuladora principal line equipment node')).toBeInTheDocument();
     expect(screen.getByDisplayValue('175')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Close properties' }));
@@ -486,24 +522,24 @@ describe('ForgePlan visual plant editor', () => {
     render(<App />);
 
     await user.click(screen.getByRole('button', { name: 'Add mixer' }));
-    await user.click(screen.getByRole('button', { name: 'Open Mixer 2 properties' }));
+    await user.click(screen.getByRole('button', { name: 'Open Mixer 1 properties' }));
     await user.selectOptions(screen.getByLabelText('Equipment type'), 'tank');
     await user.click(screen.getByRole('button', { name: 'Close properties' }));
 
     await user.click(screen.getByRole('button', { name: 'Add mixer' }));
 
-    expect(screen.getByLabelText('Mixer 3 mixer equipment node')).toBeInTheDocument();
+    expect(screen.getByLabelText('Mixer 2 mixer equipment node')).toBeInTheDocument();
   });
 
   it('exports the current plant model as pretty JSON and imports a valid JSON model', () => {
     const plant = createDemoPlant();
     const json = serializePlantModelForExport(plant);
 
-    expect(json).toContain('"name": "ForgePlan Demo Plant"');
+    expect(json).toContain('"name": "PFG Feed Production Plant"');
     expect(json).toContain('\n  "nodes"');
     expect(importPlantModelFromJson(json)).toEqual(plant);
 
-    const renamed = importPlantModelFromJson(json.replace('ForgePlan Demo Plant', 'Imported CIP Plant'));
+    const renamed = importPlantModelFromJson(json.replace('PFG Feed Production Plant', 'Imported CIP Plant'));
     expect(renamed.name).toBe('Imported CIP Plant');
   });
 
@@ -518,7 +554,7 @@ describe('ForgePlan visual plant editor', () => {
 
     await user.click(screen.getByRole('button', { name: 'Export JSON' }));
     expect(screen.getByRole('dialog', { name: 'Export plant JSON' })).toBeInTheDocument();
-    expect((screen.getByLabelText('Exported plant JSON') as HTMLTextAreaElement).value).toContain('ForgePlan Demo Plant');
+    expect((screen.getByLabelText('Exported plant JSON') as HTMLTextAreaElement).value).toContain('PFG Feed Production Plant');
     await user.click(screen.getByRole('button', { name: 'Close export JSON' }));
 
     const importedPlant = { ...createDemoPlant(), id: 'plant_imported_cip', name: 'Imported CIP Plant' };
@@ -550,7 +586,7 @@ describe('ForgePlan visual plant editor', () => {
     try {
       await expect(persistPlantModelToBrowserDb(plant)).rejects.toThrow('blocked IndexedDB');
       expect(window.localStorage.getItem('forgeplan.latestPlantId')).toBe(plant.id);
-      expect(window.localStorage.getItem(`plants:${plant.id}`)).toContain('ForgePlan Demo Plant');
+      expect(window.localStorage.getItem(`plants:${plant.id}`)).toContain('PFG Feed Production Plant');
     } finally {
       Object.defineProperty(window, 'indexedDB', { configurable: true, value: originalIndexedDb });
     }
@@ -581,10 +617,10 @@ describe('ForgePlan visual plant editor', () => {
     expect(screen.getByText('Visual Gantt schedule')).toBeInTheDocument();
     expect(screen.getByText('Resource lanes')).toBeInTheDocument();
     expect(screen.getByText('Order due markers')).toBeInTheDocument();
-    expect(screen.getByText('Due order_1 at 240')).toBeInTheDocument();
-    expect(screen.getByLabelText('Mixer 1 lane')).toBeInTheDocument();
-    expect(screen.getByLabelText('order_1 on Mixer 1 from 0 to 30')).toBeInTheDocument();
-    expect(screen.getByText(/0–30/)).toBeInTheDocument();
-    expect(screen.getAllByText(/0 → 30/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Due order_1 at 420').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Línia Dosificació LD lane')).toBeInTheDocument();
+    expect(screen.getByLabelText('order_1 on Línia Dosificació LD from 0 to 45')).toBeInTheDocument();
+    expect(screen.getByText(/0–45/)).toBeInTheDocument();
+    expect(screen.getAllByText(/0 → 45/).length).toBeGreaterThan(0);
   });
 });
