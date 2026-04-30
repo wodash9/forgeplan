@@ -1469,37 +1469,87 @@ function ReadinessBadge({ status }: { status: ReturnType<typeof validatePlant>['
 }
 
 function ScheduleTimeline({ schedule, plant }: { schedule: Schedule; plant: Plant }) {
-  const scaleEnd = Math.max(schedule.kpis.makespan, ...schedule.operations.map((operation) => operation.end), 1);
+  const scaleEnd = Math.max(
+    plant.timeHorizon,
+    schedule.kpis.makespan,
+    ...schedule.operations.map((operation) => operation.end),
+    ...plant.orders.map((order) => order.dueTime),
+    1,
+  );
+  const ticks = buildTimelineTicks(scaleEnd);
+  const lanes = plant.nodes
+    .map((node) => ({
+      node,
+      operations: schedule.operations.filter((operation) => operation.nodeId === node.id),
+    }))
+    .filter((lane) => lane.operations.length > 0);
 
   return (
-    <div className="timeline-panel" aria-label="Schedule timeline">
-      <div className="timeline-header">
-        <h4>Schedule timeline</h4>
-        <span>0 → {scaleEnd}</span>
+    <div className="timeline-panel gantt-panel" aria-label="Visual Gantt schedule">
+      <div className="timeline-header gantt-header">
+        <div>
+          <p className="eyebrow">Planner view</p>
+          <h4>Visual Gantt schedule</h4>
+        </div>
+        <span>0 → {scaleEnd} {plant.timeUnit}</span>
       </div>
-      <div className="timeline-rows">
-        {schedule.operations.map((operation) => {
-          const node = plant.nodes.find((item) => item.id === operation.nodeId);
-          const left = (operation.start / scaleEnd) * 100;
-          const width = Math.max(((operation.end - operation.start) / scaleEnd) * 100, 4);
-
-          return (
-            <div className="timeline-row" key={operation.id}>
-              <div className="timeline-resource">
-                <strong>{node?.name ?? operation.nodeId}</strong>
-                <span>{node ? nodeLabels[node.type] : operation.nodeId}</span>
-              </div>
-              <div className="timeline-track">
-                <div className="timeline-bar" style={{ marginLeft: `${left}%`, width: `${width}%` }}>
-                  {operation.start}–{operation.end} · {operation.quantity}
-                </div>
-              </div>
+      <div className="gantt-legend" aria-label="Gantt legend">
+        <span><i className="legend-chip operation" aria-hidden="true" />Resource lanes</span>
+        <span><i className="legend-chip due" aria-hidden="true" />Order due markers</span>
+      </div>
+      <div className="gantt-axis" aria-label="Gantt time axis">
+        {ticks.map((tick) => (
+          <span key={tick} style={{ left: `${(tick / scaleEnd) * 100}%` }}>{tick}</span>
+        ))}
+      </div>
+      <div className="timeline-rows gantt-rows">
+        {lanes.map(({ node, operations }) => (
+          <div className="timeline-row gantt-lane" key={node.id} aria-label={`${node.name} lane`}>
+            <div className="timeline-resource">
+              <strong>{node.name}</strong>
+              <span>{nodeLabels[node.type]}</span>
             </div>
-          );
-        })}
+            <div className="timeline-track gantt-track">
+              {plant.orders.map((order) => {
+                const left = (order.dueTime / scaleEnd) * 100;
+                return (
+                  <div
+                    className="gantt-due-marker"
+                    key={`${node.id}-${order.id}`}
+                    style={{ left: `${left}%` }}
+                    title={`Due ${order.id} at ${order.dueTime}`}
+                    aria-label={`Due ${order.id} at ${order.dueTime}`}
+                  >
+                    <span>Due {order.id} at {order.dueTime}</span>
+                  </div>
+                );
+              })}
+              {operations.map((operation) => {
+                const left = (operation.start / scaleEnd) * 100;
+                const width = Math.max(((operation.end - operation.start) / scaleEnd) * 100, 4);
+                return (
+                  <div
+                    className="timeline-bar gantt-operation"
+                    key={operation.id}
+                    style={{ left: `${left}%`, width: `${width}%` }}
+                    aria-label={`${operation.orderId} on ${node.name} from ${operation.start} to ${operation.end}`}
+                  >
+                    <strong>{operation.orderId}</strong>
+                    <span>{operation.start}–{operation.end} · {operation.quantity}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
+}
+
+function buildTimelineTicks(scaleEnd: number): number[] {
+  const step = Math.max(1, Math.ceil(scaleEnd / 4));
+  return [0, step, step * 2, step * 3, scaleEnd].filter((tick, index, values) => values.indexOf(tick) === index);
 }
 
 function SolvePanel({ schedule, plant }: { schedule: Schedule | null; plant: Plant }) {

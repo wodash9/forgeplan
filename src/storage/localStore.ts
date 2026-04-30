@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 
 import type { Plant, Scenario, Schedule, ValidationIssue } from '../domain/types.js';
-import { plantSchema, scenarioSchema } from '../schema/plantSchema.js';
+import { plantSchema, scenarioSchema, scheduleSchema } from '../schema/plantSchema.js';
 import { validatePlant } from '../validation/validatePlant.js';
 
 const require = createRequire(import.meta.url);
@@ -131,6 +131,17 @@ export class ForgePlanLocalStore {
     }));
   }
 
+  deletePlant(id: string): boolean {
+    const existing = this.getPlant(id);
+    if (!existing) return false;
+
+    this.db.prepare('delete from schedules where plant_id = ?').run(id);
+    this.db.prepare('delete from scenarios where plant_id = ?').run(id);
+    this.db.prepare('delete from plants where id = ?').run(id);
+    this.appendEvent('plant.deleted', 'plant', id, { name: existing.name, version: existing.version });
+    return true;
+  }
+
   exportPlantJson(id: string): string {
     const plant = this.getPlant(id);
     if (!plant) throw new Error(`Cannot export plant ${id}: plant does not exist.`);
@@ -185,12 +196,28 @@ export class ForgePlanLocalStore {
     return rows.map((row) => ({ id: row.id, plantId: row.plant_id, name: row.name, createdAt: row.created_at }));
   }
 
-  saveSchedule(schedule: Schedule): Schedule {
-    if (!this.getPlant(schedule.plantId)) {
+  deleteScenario(id: string): boolean {
+    const existing = this.getScenario(id);
+    if (!existing) return false;
+
+    this.db.prepare('delete from schedules where scenario_id = ?').run(id);
+    this.db.prepare('delete from scenarios where id = ?').run(id);
+    this.appendEvent('scenario.deleted', 'scenario', id, { plantId: existing.plantId, name: existing.name });
+    return true;
+  }
+
+  saveSchedule(input: unknown): Schedule {
+    const schedule = scheduleSchema.parse(input) as Schedule;
+    const plant = this.getPlant(schedule.plantId);
+    if (!plant) {
       throw new Error(`Cannot save schedule ${schedule.id}: plant ${schedule.plantId} does not exist.`);
     }
-    if (!this.getScenario(schedule.scenarioId)) {
+    const scenario = this.getScenario(schedule.scenarioId);
+    if (!scenario) {
       throw new Error(`Cannot save schedule ${schedule.id}: scenario ${schedule.scenarioId} does not exist.`);
+    }
+    if (scenario.plantId !== plant.id) {
+      throw new StoreRelationshipError(`Cannot save schedule ${schedule.id}: scenario ${scenario.id} belongs to plant ${scenario.plantId}, not ${plant.id}.`);
     }
 
     const now = new Date().toISOString();
@@ -233,6 +260,20 @@ export class ForgePlanLocalStore {
       strategy: row.strategy,
       createdAt: row.created_at,
     }));
+  }
+
+  deleteSchedule(id: string): boolean {
+    const existing = this.getSchedule(id);
+    if (!existing) return false;
+
+    this.db.prepare('delete from schedules where id = ?').run(id);
+    this.appendEvent('schedule.deleted', 'schedule', id, {
+      plantId: existing.plantId,
+      scenarioId: existing.scenarioId,
+      status: existing.status,
+      strategy: existing.strategy,
+    });
+    return true;
   }
 
   appendEvent(type: string, entityType: string, entityId: string, payload: Record<string, unknown> = {}): StoreEvent {
@@ -308,6 +349,13 @@ export class ForgePlanLocalStore {
 
     this.db.prepare('insert or ignore into metadata (key, value) values (?, ?)').run('schema_version', '1');
     this.appendEvent('store.initialized', 'store', 'local', { schemaVersion: 1 });
+  }
+}
+
+export class StoreRelationshipError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'StoreRelationshipError';
   }
 }
 

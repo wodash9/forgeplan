@@ -4,3 +4,5 @@ export * from './schema/plantSchema.js';
 export * from './validation/validatePlant.js';
 export * from './storage/localStore.js';
 export * from './solver/index.js';
+export * from './backend/api.js';
+export * from './backend/server.js';

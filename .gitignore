@@ -4,3 +4,8 @@ coverage/
 .env
 .DS_Store
 dist-web/
+.idea/
+*.db
+*.sqlite
+*.sqlite3
+graphify-out/cache/

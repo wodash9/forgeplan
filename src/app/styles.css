@@ -438,6 +438,108 @@ h1, h2, h3, p { margin-top: 0; }
   font-weight: 900;
   white-space: nowrap;
 }
+.gantt-panel {
+  padding: 14px;
+  background: linear-gradient(180deg, #fbfdf9, #f0f6f1);
+}
+.gantt-header { align-items: flex-start; }
+.gantt-header .eyebrow { margin-bottom: 4px; }
+.gantt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.gantt-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #e2efe7;
+  color: #315744;
+  font-size: 11px;
+  font-weight: 900;
+}
+.legend-chip {
+  width: 18px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1e5c45, #73d99d);
+}
+.legend-chip.due {
+  width: 3px;
+  height: 14px;
+  border-radius: 4px;
+  background: #d97706;
+}
+.gantt-axis {
+  position: relative;
+  height: 20px;
+  margin-left: 0;
+  border-bottom: 1px solid #ccd9d0;
+  color: #60726a;
+  font-size: 10px;
+  font-weight: 900;
+}
+.gantt-axis span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+.gantt-axis span:first-child { transform: none; }
+.gantt-axis span:last-child { transform: translateX(-100%); }
+.gantt-rows { gap: 12px; margin-top: 10px; }
+.gantt-lane {
+  grid-template-columns: 108px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+.gantt-lane .timeline-resource {
+  display: grid;
+  gap: 2px;
+}
+.gantt-track {
+  position: relative;
+  min-height: 38px;
+  overflow: visible;
+  border: 1px solid #d7ded4;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(90deg, rgb(96 114 106 / 12%) 0 1px, transparent 1px 25%),
+    #e8f1eb;
+}
+.gantt-operation {
+  position: absolute;
+  top: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  box-shadow: 0 8px 18px rgb(30 92 69 / 18%);
+}
+.gantt-operation span { font-size: 11px; opacity: .92; }
+.gantt-due-marker {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  z-index: 2;
+  width: 0;
+  border-left: 2px dashed #d97706;
+}
+.gantt-due-marker span {
+  position: absolute;
+  top: -19px;
+  left: 4px;
+  display: block;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #fff3ce;
+  color: #755000;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
 .operation-list { display: grid; gap: 8px; margin: 14px 0 0; padding-left: 20px; }
 .operation-list li strong { display: block; }
 .operation-list li span { color: #60726a; font-size: 13px; }

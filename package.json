@@ -10,6 +10,7 @@
     "dev": "vite",
     "preview": "vite preview",
     "solve": "node scripts/forgeplan-solve.mjs",
+    "server": "npm run build && node scripts/forgeplan-server.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },

@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForgePlan — Pantalla de comandas</title>
+  <style>
+    :root {
+      --bg: #f4f7f3;
+      --surface: #ffffff;
+      --surface-2: #f8faf7;
+      --surface-3: #edf4ee;
+      --ink: #111d18;
+      --muted: #66766f;
+      --soft: #8a9992;
+      --border: #dce5dc;
+      --border-strong: #bed0c1;
+      --green: #1e5c45;
+      --green-2: #2f7c5d;
+      --lime: #79d48c;
+      --blue: #2563eb;
+      --amber: #d97706;
+      --amber-soft: #fff6dd;
+      --red: #c24132;
+      --red-soft: #fff0eb;
+      --violet: #6155c8;
+      --shadow: 0 24px 70px rgb(17 29 24 / 12%);
+      --mono: "SFMono-Regular", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      min-width: 1240px;
+      background:
+        radial-gradient(circle at 12% -10%, rgb(121 212 140 / 22%), transparent 28%),
+        radial-gradient(circle at 98% 0%, rgb(37 99 235 / 10%), transparent 25%),
+        var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 76px minmax(840px, 1fr) 380px;
+      gap: 14px;
+      min-height: 100vh;
+      padding: 14px;
+    }
+
+    .rail {
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      background: linear-gradient(180deg, #12362c, #0e201b);
+      color: #effaf2;
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      justify-items: center;
+      padding: 14px 10px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      background: #effaf2;
+      color: var(--green);
+      font-weight: 950;
+      letter-spacing: -0.06em;
+      box-shadow: 0 12px 28px rgb(0 0 0 / 24%);
+    }
+
+    .nav-stack { display: grid; gap: 12px; align-content: start; padding-top: 34px; }
+    .nav-item {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      color: rgb(255 255 255 / 68%);
+      border: 1px solid transparent;
+      font-size: 18px;
+    }
+    .nav-item.active {
+      color: #0d2b21;
+      background: linear-gradient(135deg, #dffff0, #79d48c);
+      box-shadow: 0 12px 30px rgb(121 212 140 / 26%);
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      background: rgb(255 255 255 / 78%);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 50px rgb(17 29 24 / 8%);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--green-2);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    h1 { margin: 0; font-size: 32px; letter-spacing: -0.045em; line-height: 1; }
+    .subcopy { margin: 8px 0 0; max-width: 760px; color: var(--muted); font-size: 14px; line-height: 1.42; }
+
+    .top-actions { display: flex; gap: 10px; align-items: center; }
+    button { font: inherit; }
+    .btn {
+      border: 0;
+      border-radius: 15px;
+      padding: 12px 15px;
+      background: var(--green);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 850;
+      box-shadow: 0 12px 28px rgb(30 92 69 / 20%);
+    }
+    .btn.secondary {
+      background: #eef5ef;
+      color: var(--green);
+      box-shadow: none;
+      border: 1px solid var(--border);
+    }
+    .btn.blue { background: #eef4ff; color: var(--blue); border: 1px solid #c8d8ff; box-shadow: none; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      position: relative;
+      overflow: hidden;
+      min-height: 92px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--surface);
+      box-shadow: 0 14px 40px rgb(17 29 24 / 7%);
+    }
+    .metric strong { display: block; margin-top: 7px; font-size: 28px; letter-spacing: -0.055em; }
+    .metric span { color: #51635b; font-size: 12px; font-weight: 850; text-transform: uppercase; letter-spacing: .07em; }
+    .metric small { display: block; margin-top: 5px; color: #5f7068; font-weight: 750; }
+    .metric.alert { border-color: #f2c98a; background: linear-gradient(180deg, #fffaf0, #fff); }
+    .metric.danger { border-color: #efb8ad; background: linear-gradient(180deg, #fff2ed, #fff); }
+    .metric.ok { border-color: #b8dec2; background: linear-gradient(180deg, #f0fff3, #fff); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(620px, 1fr) 330px;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-head h2, .detail-card h3 { margin: 0; letter-spacing: -0.03em; }
+    .panel-head p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+
+    .searchbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 280px;
+      padding: 10px 12px;
+      border-radius: 15px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 750;
+    }
+    .searchbar input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px 0;
+      flex-wrap: wrap;
+    }
+    .chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 11px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .chip.active { background: #e7f5ec; border-color: #afd3ba; color: var(--green); }
+    .chip.warning { background: var(--amber-soft); border-color: #f4d38b; color: var(--amber); }
+    .chip.danger { background: var(--red-soft); border-color: #efb8ad; color: var(--red); }
+
+    .orders-table { padding: 10px; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0 7px; }
+    th {
+      padding: 0 12px 6px;
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      text-align: left;
+    }
+    td {
+      padding: 10px 12px;
+      background: var(--surface-2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      font-size: 14px;
+    }
+    td:first-child { border-left: 1px solid var(--border); border-radius: 16px 0 0 16px; }
+    td:last-child { border-right: 1px solid var(--border); border-radius: 0 16px 16px 0; }
+    tr.selected td {
+      background: #eef7f1;
+      border-color: #98caa8;
+      box-shadow: inset 4px 0 0 var(--green);
+    }
+    .order-title { display: grid; gap: 3px; }
+    .order-title strong { font-size: 14px; }
+    .order-title small { color: var(--muted); font-weight: 700; }
+    .mono { font-family: var(--mono); font-size: 12px; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
+    .status.ready { background: #e8f8ed; color: #16713b; }
+    .status.risk { background: var(--amber-soft); color: var(--amber); }
+    .status.late { background: var(--red-soft); color: var(--red); }
+    .priority {
+      display: inline-grid;
+      place-items: center;
+      min-width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background: #eef2ff;
+      color: var(--blue);
+      font-weight: 950;
+    }
+
+    .capacity-bar {
+      display: grid;
+      gap: 5px;
+      min-width: 90px;
+    }
+    .bar-bg { height: 7px; border-radius: 999px; background: #dde8df; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--green), var(--lime)); }
+    .bar-fill.risk { background: linear-gradient(90deg, #f59e0b, #f97316); }
+    .bar-fill.late { background: linear-gradient(90deg, #ef4444, #b91c1c); }
+
+    .planning-strip {
+      display: grid;
+      grid-template-columns: 92px 1fr 68px;
+      align-items: center;
+      gap: 10px;
+      margin: 0 16px 14px;
+      padding: 12px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #12362c, #1e5c45);
+      color: #effaf2;
+    }
+    .planning-strip strong { font-size: 13px; }
+    .timeline { height: 12px; background: rgb(255 255 255 / 18%); border-radius: 999px; position: relative; overflow: hidden; }
+    .slot { position: absolute; inset-block: 0; border-radius: 999px; }
+    .slot.a { left: 4%; width: 24%; background: #79d48c; }
+    .slot.b { left: 31%; width: 18%; background: #fbbf24; }
+    .slot.c { left: 56%; width: 34%; background: #93c5fd; }
+    .planning-strip span { justify-self: end; font-family: var(--mono); font-size: 12px; color: rgb(239 250 242 / 78%); }
+
+    .side-panel { display: grid; gap: 12px; }
+    .detail-card { padding: 14px; }
+    .selected-order {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #f0f8f2, #fff);
+      border: 1px solid #cde3d2;
+    }
+    .selected-order h2 { margin: 0; font-size: 24px; letter-spacing: -0.045em; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field {
+      display: grid;
+      gap: 6px;
+      padding: 9px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: #fff;
+    }
+    .field label { color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+    .field input, .field select {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--ink);
+      font-weight: 850;
+      font-size: 15px;
+    }
+
+    .route {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .route-step {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .step-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 10px; background: var(--surface-3); color: var(--green); font-weight: 950; }
+    .route-step strong { font-size: 13px; }
+    .route-step small { color: var(--muted); font-weight: 750; }
+
+    .recommendation {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 22px;
+      background: #111d18;
+      color: #effaf2;
+      overflow: hidden;
+      position: relative;
+    }
+    .recommendation::after {
+      content: "";
+      position: absolute;
+      width: 190px;
+      height: 190px;
+      border-radius: 50%;
+      right: -70px;
+      top: -90px;
+      background: rgb(121 212 140 / 18%);
+    }
+    .recommendation p { margin: 0; color: rgb(239 250 242 / 78%); line-height: 1.45; font-size: 13px; }
+    .recommendation .btn { width: 100%; background: #79d48c; color: #12362c; box-shadow: none; }
+
+    .right {
+      display: grid;
+      gap: 16px;
+    }
+    .health-card {
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .health-card h3 { margin: 0 0 12px; }
+    .checklist { display: grid; gap: 9px; }
+    .check {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+    .check b { color: var(--ink); }
+    .check .dot { flex: 0 0 auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; background: #e8f8ed; color: #16713b; font-size: 12px; }
+    .check.warn .dot { background: var(--amber-soft); color: var(--amber); }
+
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      background: rgb(17 29 24 / 38%);
+      backdrop-filter: blur(3px);
+    }
+    body.show-drawer .drawer-backdrop { display: block; }
+    .drawer {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      bottom: 20px;
+      width: 520px;
+      padding: 20px;
+      border-radius: 28px;
+      background: #fff;
+      border: 1px solid var(--border);
+      box-shadow: 0 40px 100px rgb(17 29 24 / 30%);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+    }
+    .drawer-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-weight: 950;
+      cursor: pointer;
+    }
+    .drawer h2 { margin: 0; font-size: 28px; letter-spacing: -0.04em; }
+    .drawer-form { display: grid; gap: 12px; align-content: start; }
+    .drawer .field { background: var(--surface-2); }
+    .drawer-preview {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #f2d58d;
+      background: #fff9e9;
+    }
+    .drawer-preview strong { display: block; margin-bottom: 6px; color: var(--amber); }
+    .drawer-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    @media (max-width: 1280px) {
+      body { min-width: 1024px; }
+      .app { grid-template-columns: 68px 1fr; }
+      .right { display: none; }
+      .workspace { grid-template-columns: 1fr 320px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="rail" aria-label="ForgePlan navigation">
+      <div class="brand-mark">FP</div>
+      <div class="nav-stack">
+        <div class="nav-item">⌘</div>
+        <div class="nav-item">⌁</div>
+        <div class="nav-item active" title="Comandas">▤</div>
+        <div class="nav-item">◎</div>
+        <div class="nav-item">↗</div>
+      </div>
+      <div class="nav-item">?</div>
+    </nav>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">ForgePlan · planificación</p>
+          <h1>Comandas de producción</h1>
+          <p class="subcopy">Prioriza pedidos, ajusta cantidades y comprueba si la planta puede cumplirlos antes de tocar la planificación real. Diseñada para entender riesgo y capacidad en menos de 30 segundos.</p>
+        </div>
+        <div class="top-actions">
+          <button class="btn secondary">Importar CSV</button>
+          <button class="btn blue" onclick="document.body.classList.add('show-drawer')">Nueva comanda</button>
+          <button class="btn">Planificar pedidos</button>
+        </div>
+      </header>
+
+      <section class="metrics" aria-label="Resumen de comandas">
+        <div class="metric ok"><span>Listas para planificar</span><strong>8</strong><small>6 rutas completas · 2 con aviso</small></div>
+        <div class="metric alert"><span>En riesgo</span><strong>3</strong><small>vence antes de 90 min</small></div>
+        <div class="metric"><span>Carga total</span><strong>1.84 t</strong><small>Feed product · bolsa 25 kg</small></div>
+        <div class="metric danger"><span>Impacto si no actúas</span><strong>42 min</strong><small>retraso estimado acumulado</small></div>
+      </section>
+
+      <section class="workspace">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Lista priorizada</h2>
+              <p>Ordenada por urgencia real: vencimiento, prioridad y riesgo de capacidad.</p>
+            </div>
+            <label class="searchbar">⌕ <input value="cliente: avícola" aria-label="Buscar comandas" /></label>
+          </div>
+          <div class="filters" aria-label="Filtros de comandas">
+            <span class="chip active">Todas 12</span>
+            <span class="chip warning">En riesgo 3</span>
+            <span class="chip danger">Tarde 1</span>
+            <span class="chip">Alta prioridad 4</span>
+            <span class="chip">Hoy</span>
+            <span class="chip">Sin ruta</span>
+          </div>
+          <div class="orders-table">
+            <table aria-label="Comandas">
+              <thead>
+                <tr>
+                  <th>Comanda</th>
+                  <th>Material</th>
+                  <th>Cantidad</th>
+                  <th>Entrega</th>
+                  <th>Prioridad</th>
+                  <th>Ruta</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="selected">
+                  <td><div class="order-title"><strong>Avícola Norte · Lote A</strong><small class="mono">CMD-24029-001</small></div></td>
+                  <td>Feed Product</td>
+                  <td><b>320 kg</b></td>
+                  <td><b>10:30</b><br><small>quedan 74 min</small></td>
+                  <td><span class="priority">1</span></td>
+                  <td><div class="capacity-bar"><small>Carga ruta 78%</small><div class="bar-bg"><div class="bar-fill risk" style="width:78%"></div></div></div></td>
+                  <td><span class="status risk">Riesgo</span></td>
+                </tr>
+                <tr>
+                  <td><div class="order-title"><strong>Coop. Sant Jordi</strong><small class="mono">CMD-24029-002</small></div></td>
+                  <td>Feed Product</td>
+                  <td><b>180 kg</b></td>
+                  <td><b>11:15</b><br><small>quedan 119 min</small></td>
+                  <td><span class="priority">2</span></td>
+                  <td><div class="capacity-bar"><small>Carga ruta 44%</small><div class="bar-bg"><div class="bar-fill" style="width:44%"></div></div></div></td>
+                  <td><span class="status ready">Lista</span></td>
+                </tr>
+                <tr>
+                  <td><div class="order-title"><strong>Granjas La Plana</strong><small class="mono">CMD-24029-003</small></div></td>
+                  <td>Feed Product</td>
+                  <td><b>460 kg</b></td>
+                  <td><b>09:45</b><br><small>pasado 1 min</small></td>
+                  <td><span class="priority">1</span></td>
+                  <td><div class="capacity-bar"><small>Carga mixer 94%</small><div class="bar-bg"><div class="bar-fill late" style="width:94%"></div></div></div></td>
+                  <td><span class="status late">Tarde</span></td>
+                </tr>
+                <tr>
+                  <td><div class="order-title"><strong>Biofeed Export</strong><small class="mono">CMD-24029-004</small></div></td>
+                  <td>Feed Product</td>
+                  <td><b>120 kg</b></td>
+                  <td><b>13:00</b><br><small>quedan 224 min</small></td>
+                  <td><span class="priority">3</span></td>
+                  <td><div class="capacity-bar"><small>Carga ruta 30%</small><div class="bar-bg"><div class="bar-fill" style="width:30%"></div></div></div></td>
+                  <td><span class="status ready">Lista</span></td>
+                </tr>
+                <tr>
+                  <td><div class="order-title"><strong>Urgente · Cliente demo</strong><small class="mono">CMD-24029-005</small></div></td>
+                  <td>Feed Product</td>
+                  <td><b>250 kg</b></td>
+                  <td><b>10:05</b><br><small>quedan 49 min</small></td>
+                  <td><span class="priority">0</span></td>
+                  <td><div class="capacity-bar"><small>Necesita hueco 72%</small><div class="bar-bg"><div class="bar-fill risk" style="width:72%"></div></div></div></td>
+                  <td><span class="status risk">Riesgo</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="planning-strip">
+            <strong>Plan preview</strong>
+            <div class="timeline" aria-label="Planificación preliminar"><span class="slot a"></span><span class="slot b"></span><span class="slot c"></span></div>
+            <span>0 → 240 min</span>
+          </div>
+        </div>
+
+        <aside class="side-panel">
+          <div class="panel detail-card">
+            <p class="eyebrow">Comanda seleccionada</p>
+            <div class="selected-order">
+              <div>
+                <h2>CMD-24029-001</h2>
+                <small>Avícola Norte · Feed Product</small>
+              </div>
+              <div class="field-grid">
+                <div class="field"><label>Cantidad</label><input value="320 kg" /></div>
+                <div class="field"><label>Entrega</label><input value="10:30" /></div>
+                <div class="field"><label>Prioridad</label><select><option>1 · Alta</option></select></div>
+                <div class="field"><label>Inicio mínimo</label><input value="Ahora" /></div>
+              </div>
+            </div>
+
+            <div class="route">
+              <h3>Ruta productiva</h3>
+              <div class="route-step"><span class="step-icon">1</span><div><strong>Raw Input</strong><br><small>material disponible</small></div><small>OK</small></div>
+              <div class="route-step"><span class="step-icon">2</span><div><strong>Mixer 1</strong><br><small>cuello de botella probable</small></div><small>78%</small></div>
+              <div class="route-step"><span class="step-icon">3</span><div><strong>Dispatch</strong><br><small>salida preparada</small></div><small>OK</small></div>
+            </div>
+          </div>
+
+          <div class="recommendation">
+            <p class="eyebrow" style="color:#79d48c">Recomendación</p>
+            <h3 style="margin:0">Planifica este pedido antes de los lotes de prioridad 3.</h3>
+            <p>La entrega es cercana y Mixer 1 ya supera el 75% de ocupación. Si sube la cantidad, el riesgo pasa a retraso.</p>
+            <button class="btn">Simular prioridad alta</button>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <aside class="right">
+      <section class="health-card">
+        <p class="eyebrow">Readiness fábrica</p>
+        <h3>Puede planificar, pero hay riesgo</h3>
+        <div class="checklist">
+          <div class="check"><span class="dot">✓</span><span><b>Rutas completas:</b> todas las comandas tienen entrada, proceso y salida.</span></div>
+          <div class="check"><span class="dot">✓</span><span><b>Datos mínimos:</b> cantidad, entrega y prioridad definidos.</span></div>
+          <div class="check warn"><span class="dot">!</span><span><b>Capacidad:</b> Mixer 1 concentra el 78% de la carga inmediata.</span></div>
+          <div class="check warn"><span class="dot">!</span><span><b>Acción:</b> reordenar prioridad o dividir lote urgente.</span></div>
+        </div>
+      </section>
+      <section class="health-card">
+        <p class="eyebrow">Qué debe mirar el planner</p>
+        <div class="checklist">
+          <div class="check"><span class="dot">1</span><span>Primero filtra <b>En riesgo</b> y <b>Tarde</b>.</span></div>
+          <div class="check"><span class="dot">2</span><span>Selecciona una comanda y revisa su ruta productiva.</span></div>
+          <div class="check"><span class="dot">3</span><span>Cambia cantidad, entrega o prioridad y pulsa <b>Planificar pedidos</b>.</span></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="drawer-backdrop" onclick="document.body.classList.remove('show-drawer')">
+    <section class="drawer" onclick="event.stopPropagation()" role="dialog" aria-label="Nueva comanda">
+      <button class="drawer-close" onclick="document.body.classList.remove('show-drawer')" aria-label="Cerrar nueva comanda">×</button>
+      <header>
+        <p class="eyebrow">Nueva comanda</p>
+        <h2>Añadir pedido a la planificación</h2>
+        <p class="subcopy">Formulario corto: solo datos necesarios para que el planner pueda simular capacidad y riesgo.</p>
+      </header>
+      <div class="drawer-form">
+        <div class="field"><label>Cliente / referencia</label><input value="Avícola Delta · lote B" /></div>
+        <div class="field-grid">
+          <div class="field"><label>Material</label><select><option>Feed Product</option></select></div>
+          <div class="field"><label>Cantidad</label><input value="220 kg" /></div>
+          <div class="field"><label>Entrega requerida</label><input value="12:15" /></div>
+          <div class="field"><label>Prioridad</label><select><option>2 · Normal alta</option></select></div>
+        </div>
+        <div class="field"><label>Notas de fábrica</label><input value="Camión reservado a las 12:40" /></div>
+        <div class="drawer-preview">
+          <strong>Vista previa de impacto</strong>
+          <div class="checklist">
+            <div class="check"><span class="dot">✓</span><span>Ruta encontrada: Raw Input → Mixer 1 → Dispatch.</span></div>
+            <div class="check warn"><span class="dot">!</span><span>Podría empujar CMD-24029-001 a riesgo si se mantiene la prioridad actual.</span></div>
+          </div>
+        </div>
+      </div>
+      <footer class="drawer-actions">
+        <button class="btn secondary" onclick="document.body.classList.remove('show-drawer')">Cancelar</button>
+        <button class="btn">Añadir y simular</button>
+      </footer>
+    </section>
+  </div>
+
+  <script>
+    if (location.hash === '#new') document.body.classList.add('show-drawer');
+  </script>
+</body>
+</html>

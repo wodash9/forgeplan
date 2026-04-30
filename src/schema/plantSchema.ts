@@ -91,5 +91,37 @@ export const scenarioSchema = z.object({
   solverSettings: solverSettingsSchema,
 });
 
+export const scheduleStatusSchema = z.enum(['optimal', 'feasible', 'infeasible', 'unknown', 'error']);
+
+export const scheduledOperationSchema = z.object({
+  id: z.string().min(1),
+  orderId: z.string().min(1),
+  nodeId: z.string().min(1),
+  materialId: z.string().min(1),
+  start: z.number().nonnegative(),
+  end: z.number().nonnegative(),
+  quantity: z.number().positive(),
+}).refine((operation) => operation.end >= operation.start, {
+  message: 'Operation end must be greater than or equal to start.',
+  path: ['end'],
+});
+
+export const scheduleSchema = z.object({
+  id: z.string().min(1),
+  plantId: z.string().min(1),
+  scenarioId: z.string().min(1),
+  status: scheduleStatusSchema,
+  strategy: solverStrategySchema,
+  operations: z.array(scheduledOperationSchema),
+  kpis: z.object({
+    lateOrders: z.number().int().nonnegative(),
+    totalTardiness: z.number().nonnegative(),
+    makespan: z.number().nonnegative(),
+  }),
+  violations: z.array(z.string()),
+  explanations: z.array(z.string()),
+});
+
 export type PlantInput = z.infer<typeof plantSchema>;
 export type ScenarioInput = z.infer<typeof scenarioSchema>;
+export type ScheduleInput = z.infer<typeof scheduleSchema>;

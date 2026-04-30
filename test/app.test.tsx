@@ -449,9 +449,13 @@ describe('ForgePlan visual plant editor', () => {
     expect(screen.getByText('makespan')).toBeInTheDocument();
     expect(screen.getByText('late orders')).toBeInTheDocument();
     expect(screen.getByText('tardiness')).toBeInTheDocument();
-    expect(screen.getByLabelText('Schedule timeline')).toBeInTheDocument();
-    expect(screen.getByText('Schedule timeline')).toBeInTheDocument();
-    expect(screen.getAllByText('Mixer 1').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Visual Gantt schedule')).toBeInTheDocument();
+    expect(screen.getByText('Visual Gantt schedule')).toBeInTheDocument();
+    expect(screen.getByText('Resource lanes')).toBeInTheDocument();
+    expect(screen.getByText('Order due markers')).toBeInTheDocument();
+    expect(screen.getByText('Due order_1 at 240')).toBeInTheDocument();
+    expect(screen.getByLabelText('Mixer 1 lane')).toBeInTheDocument();
+    expect(screen.getByLabelText('order_1 on Mixer 1 from 0 to 30')).toBeInTheDocument();
     expect(screen.getByText(/0–30/)).toBeInTheDocument();
     expect(screen.getAllByText(/0 → 30/).length).toBeGreaterThan(0);
   });
