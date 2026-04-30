@@ -12,6 +12,28 @@
       "compatibilityTags": ["feed"]
     }
   ],
+  "products": [
+    {
+      "id": "prod_feed_premix",
+      "name": "Feed Premix",
+      "sku": "PREMIX-BASE",
+      "unit": "kg",
+      "family": "Intermediate",
+      "materialId": "mat_feed",
+      "properties": { "protein": "12%", "form": "meal" },
+      "components": []
+    },
+    {
+      "id": "prod_complete_feed",
+      "name": "Complete Feed",
+      "sku": "FEED-COMPLETE",
+      "unit": "kg",
+      "family": "Finished feed",
+      "materialId": "mat_feed",
+      "properties": { "protein": "16%", "format": "pellet" },
+      "components": [{ "productId": "prod_feed_premix", "quantity": 80 }]
+    }
+  ],
   "nodes": [
     {
       "id": "node_source",

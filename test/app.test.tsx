@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import App, {
   addCustomPlantNode,
   addPlantConnection,
+  addProductToPlant,
   buildEquipmentFlowNodes,
   importPlantModelFromJson,
   serializePlantModelForExport,
@@ -86,6 +87,58 @@ describe('ForgePlan visual plant editor', () => {
     expect(screen.getByLabelText('Custom equipment class')).toHaveValue('CIP skid');
     expect(screen.getByLabelText('ISA tag')).toHaveValue('CIP-401');
     expect(screen.getByLabelText('Custom properties')).toHaveValue('cleaning=CIP\noperator=night shift');
+  });
+
+  it('adds a product with properties and bill-of-material dependencies through a pure helper', () => {
+    const plant = createDemoPlant();
+    const result = addProductToPlant(plant, {
+      name: 'Premium Feed 18%',
+      sku: 'PF-18',
+      unit: 'kg',
+      family: 'Finished feed',
+      properties: { protein: '18%', allergen: 'none' },
+      components: [{ productId: 'prod_feed_premix', quantity: 80 }],
+    });
+
+    const product = result.plant.products.find((item) => item.id === result.productId);
+    expect(product).toMatchObject({
+      id: 'prod_premium_feed_18',
+      name: 'Premium Feed 18%',
+      sku: 'PF-18',
+      unit: 'kg',
+      family: 'Finished feed',
+      properties: { protein: '18%', allergen: 'none' },
+      components: [{ productId: 'prod_feed_premix', quantity: 80 }],
+    });
+  });
+
+  it('renders a product catalog screen with list, product form, properties, and dependencies', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Product catalog' }));
+
+    expect(screen.getByRole('heading', { name: 'Product catalog & BOM' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Product list' })).toHaveTextContent('Complete Feed');
+    expect(screen.getByRole('region', { name: 'Product list' })).toHaveTextContent('Feed Premix × 80 kg');
+    expect(screen.getByRole('form', { name: 'Create product form' })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText('Product name'));
+    await user.type(screen.getByLabelText('Product name'), 'Premium Feed 18%');
+    await user.clear(screen.getByLabelText('SKU'));
+    await user.type(screen.getByLabelText('SKU'), 'PF-18');
+    await user.clear(screen.getByLabelText('Properties'));
+    await user.type(screen.getByLabelText('Properties'), 'protein=18%\ntexture=pellet');
+    await user.selectOptions(screen.getByLabelText('Component product'), 'prod_feed_premix');
+    await user.clear(screen.getByLabelText('Component quantity'));
+    await user.type(screen.getByLabelText('Component quantity'), '80');
+    await user.click(screen.getByRole('button', { name: 'Add component' }));
+    expect(screen.getByText('Feed Premix × 80 kg')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Create product' }));
+
+    expect(screen.getByRole('region', { name: 'Product list' })).toHaveTextContent('Premium Feed 18%');
+    expect(screen.getByRole('region', { name: 'Product list' })).toHaveTextContent('protein: 18%');
   });
 
   it('stores custom plant node metadata through a pure add helper', () => {

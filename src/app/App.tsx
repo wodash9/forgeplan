@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   Controls,
@@ -18,7 +18,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { Connection as PlantConnection, Plant, PlantNode, Schedule } from '../domain/types.js';
+import type { Connection as PlantConnection, Plant, PlantNode, Product, ProductComponent, Schedule } from '../domain/types.js';
 import { createScenario } from '../domain/defaults.js';
 import { plantSchema } from '../schema/plantSchema.js';
 import { buildSolverModel, mockSolverAdapter } from '../solver/index.js';
@@ -155,6 +155,18 @@ type CustomNodeInput = {
   customProperties?: Record<string, string> | undefined;
 };
 
+type ProductInput = {
+  name?: string | undefined;
+  sku?: string | undefined;
+  unit?: string | undefined;
+  family?: string | undefined;
+  materialId?: string | undefined;
+  properties?: Record<string, string> | undefined;
+  components?: ProductComponent[] | undefined;
+};
+
+type ActiveScreen = 'plant' | 'products';
+
 function metadataString(metadata: Record<string, unknown> | undefined, key: string): string | undefined {
   const value = metadata?.[key];
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -191,6 +203,43 @@ function formatCustomProperties(value: unknown): string {
   return Object.entries(value as Record<string, unknown>)
     .map(([key, item]) => `${key}=${typeof item === 'string' ? item : String(item)}`)
     .join('\n');
+}
+
+function slugifyProductName(value: string): string {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return slug || 'product';
+}
+
+function nextProductId(products: Product[], name: string): string {
+  const baseId = `prod_${slugifyProductName(name)}`;
+  if (!products.some((product) => product.id === baseId)) return baseId;
+  let index = 2;
+  while (products.some((product) => product.id === `${baseId}_${index}`)) index += 1;
+  return `${baseId}_${index}`;
+}
+
+export function addProductToPlant(plant: Plant, input: ProductInput): { plant: Plant; productId: string } {
+  const name = input.name?.trim() || 'New product';
+  const productId = nextProductId(plant.products, name);
+  const product: Product = {
+    id: productId,
+    name,
+    sku: input.sku?.trim() || productId.toUpperCase(),
+    unit: input.unit?.trim() || 'kg',
+    family: input.family?.trim() || undefined,
+    materialId: input.materialId?.trim() || undefined,
+    properties: input.properties ?? {},
+    components: (input.components ?? []).filter((component) =>
+      component.productId !== productId &&
+      component.quantity > 0 &&
+      plant.products.some((candidate) => candidate.id === component.productId),
+    ),
+  };
+  return { plant: { ...plant, products: [...plant.products, product] }, productId };
 }
 
 const browserDbName = 'forgeplan-local-db';
@@ -492,6 +541,7 @@ function nextNodeNumber(nodes: PlantNode[], idPrefix: string): number {
 
 export default function App() {
   const [plant, setPlant] = useState<Plant>(() => createDemoPlant());
+  const [activeScreen, setActiveScreen] = useState<ActiveScreen>('plant');
   const [selectedNodeId, setSelectedNodeId] = useState('node_mixer');
   const [propertiesNodeId, setPropertiesNodeId] = useState<string | null>(null);
   const [propertiesConnectionId, setPropertiesConnectionId] = useState<string | null>(null);
@@ -581,6 +631,12 @@ export default function App() {
     setPlant(result.plant);
     setSelectedNodeId(result.nodeId);
     setCreatingCustomNode(false);
+    setSchedule(null);
+  };
+
+  const createProduct = (input: ProductInput) => {
+    const result = addProductToPlant(plant, input);
+    setPlant(result.plant);
     setSchedule(null);
   };
 
@@ -710,6 +766,16 @@ export default function App() {
         <ReadinessBadge status={validation.status} />
       </header>
 
+      <nav className="screen-tabs" aria-label="ForgePlan screens">
+        <button type="button" className={activeScreen === 'plant' ? 'active' : ''} onClick={() => setActiveScreen('plant')}>
+          Plant editor
+        </button>
+        <button type="button" className={activeScreen === 'products' ? 'active' : ''} onClick={() => setActiveScreen('products')}>
+          Product catalog
+        </button>
+      </nav>
+
+      {activeScreen === 'plant' ? (
       <main className="workspace-grid">
         <aside className="panel palette" aria-label="Plant palette">
           <p className="eyebrow">Palette</p>
@@ -816,6 +882,9 @@ export default function App() {
           <SolvePanel schedule={schedule} plant={plant} />
         </aside>
       </main>
+      ) : (
+        <ProductCatalogScreen plant={plant} onCreateProduct={createProduct} />
+      )}
 
       {creatingCustomNode && (
         <CreateCustomNodeDialog
@@ -858,6 +927,153 @@ export default function App() {
         />
       )}
     </div>
+  );
+}
+
+function productById(products: Product[], productId: string): Product | undefined {
+  return products.find((product) => product.id === productId);
+}
+
+function ProductCatalogScreen({ plant, onCreateProduct }: { plant: Plant; onCreateProduct: (input: ProductInput) => void }) {
+  const [name, setName] = useState('Premium Feed 18%');
+  const [sku, setSku] = useState('PF-18');
+  const [unit, setUnit] = useState('kg');
+  const [family, setFamily] = useState('Finished feed');
+  const [propertiesText, setPropertiesText] = useState('protein=18%\ntexture=pellet');
+  const [componentProductId, setComponentProductId] = useState(plant.products[0]?.id ?? '');
+  const [componentQuantity, setComponentQuantity] = useState('80');
+  const [components, setComponents] = useState<ProductComponent[]>([]);
+
+  const addComponent = () => {
+    const quantity = Number(componentQuantity);
+    if (!componentProductId || !Number.isFinite(quantity) || quantity <= 0) return;
+    setComponents((current) => [...current, { productId: componentProductId, quantity }]);
+  };
+
+  const submitProduct = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onCreateProduct({
+      name,
+      sku,
+      unit,
+      family,
+      properties: parseCustomProperties(propertiesText),
+      components,
+    });
+    setName('');
+    setSku('');
+    setFamily('');
+    setPropertiesText('');
+    setComponents([]);
+  };
+
+  return (
+    <main className="product-screen" aria-label="Product catalog workspace">
+      <section className="panel product-hero-panel">
+        <p className="eyebrow">Products</p>
+        <h2>Product catalog & BOM</h2>
+        <p className="muted-dark">Define productos fabricables, propiedades industriales y dependencias tipo receta/BOM entre productos.</p>
+        <div className="product-kpis">
+          <div><strong>{plant.products.length}</strong><span>products</span></div>
+          <div><strong>{plant.products.filter((product) => product.components.length > 0).length}</strong><span>with dependencies</span></div>
+        </div>
+      </section>
+
+      <section className="panel product-list-panel" aria-label="Product list">
+        <p className="eyebrow">List</p>
+        <h3>Product list</h3>
+        <div className="product-list">
+          {plant.products.map((product) => (
+            <article className="product-card" key={product.id}>
+              <div className="product-card-header">
+                <div>
+                  <h4>{product.name}</h4>
+                  <p>{product.sku} · {product.family ?? 'No family'} · {product.unit}</p>
+                </div>
+                <span className="product-badge">{product.components.length ? 'BOM' : 'base'}</span>
+              </div>
+              <dl className="product-properties">
+                {Object.entries(product.properties).map(([key, value]) => (
+                  <div key={key}><dt>{key}: </dt><dd>{value}</dd></div>
+                ))}
+              </dl>
+              {product.components.length > 0 ? (
+                <div className="bom-list" aria-label={`${product.name} dependencies`}>
+                  <strong>Made from</strong>
+                  {product.components.map((component, index) => {
+                    const dependency = productById(plant.products, component.productId);
+                    return (
+                      <span className="bom-chip" key={`${product.id}-${component.productId}-${component.quantity}-${index}`}>
+                        <span>{dependency?.name ?? component.productId}</span>
+                        <span> × {component.quantity} {dependency?.unit ?? product.unit}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="muted-dark">Base product · no dependencies</p>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel product-form-panel">
+        <p className="eyebrow">Create</p>
+        <h3>Create product</h3>
+        <form aria-label="Create product form" className="product-form" onSubmit={submitProduct}>
+          <label>
+            Product name
+            <input value={name} onChange={(event) => setName(event.target.value)} />
+          </label>
+          <label>
+            SKU
+            <input value={sku} onChange={(event) => setSku(event.target.value)} />
+          </label>
+          <div className="form-row-two">
+            <label>
+              Unit
+              <input value={unit} onChange={(event) => setUnit(event.target.value)} />
+            </label>
+            <label>
+              Family
+              <input value={family} onChange={(event) => setFamily(event.target.value)} />
+            </label>
+          </div>
+          <label>
+            Properties
+            <textarea value={propertiesText} onChange={(event) => setPropertiesText(event.target.value)} rows={4} />
+          </label>
+          <div className="bom-builder">
+            <h4>Dependencies / BOM</h4>
+            <div className="form-row-two">
+              <label>
+                Component product
+                <select value={componentProductId} onChange={(event) => setComponentProductId(event.target.value)}>
+                  {plant.products.map((product) => (
+                    <option key={product.id} value={product.id}>{product.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Component quantity
+                <input value={componentQuantity} onChange={(event) => setComponentQuantity(event.target.value)} inputMode="decimal" />
+              </label>
+            </div>
+            <button className="secondary-action" type="button" onClick={addComponent}>Add component</button>
+            {components.length > 0 && (
+              <ul className="pending-components">
+                {components.map((component, index) => {
+                  const dependency = productById(plant.products, component.productId);
+                  return <li key={`${component.productId}-${index}`}>{dependency?.name ?? component.productId} × {component.quantity} {dependency?.unit ?? unit}</li>;
+                })}
+              </ul>
+            )}
+          </div>
+          <button type="submit">Create product</button>
+        </form>
+      </section>
+    </main>
   );
 }
 

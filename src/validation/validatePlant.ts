@@ -25,6 +25,7 @@ export function validatePlant(input: unknown): ValidationResult {
 function validateDomain(plant: Plant): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const materialIds = new Set(plant.materials.map((material) => material.id));
+  const productIds = new Set(plant.products.map((product) => product.id));
   const nodeIds = new Set(plant.nodes.map((node) => node.id));
 
   if (plant.materials.length === 0) {
@@ -44,6 +45,37 @@ function validateDomain(plant: Plant): ValidationIssue[] {
           `orders.${order.id}.materialId`,
         ),
       );
+    }
+  }
+
+  for (const product of plant.products) {
+    if (product.materialId !== undefined && !materialIds.has(product.materialId)) {
+      issues.push(
+        error(
+          'product.unknown_material',
+          `Product ${product.id} references unknown material ${product.materialId}.`,
+          `products.${product.id}.materialId`,
+        ),
+      );
+    }
+    for (const component of product.components) {
+      if (component.productId === product.id) {
+        issues.push(
+          error(
+            'product_component.self_reference',
+            `Product ${product.id} cannot depend on itself.`,
+            `products.${product.id}.components`,
+          ),
+        );
+      } else if (!productIds.has(component.productId)) {
+        issues.push(
+          error(
+            'product_component.unknown_product',
+            `Product ${product.id} references unknown component product ${component.productId}.`,
+            `products.${product.id}.components`,
+          ),
+        );
+      }
     }
   }
 

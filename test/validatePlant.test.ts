@@ -74,6 +74,35 @@ describe('ForgePlan domain kernel', () => {
     expect(result.issues.map((issue) => issue.code)).toContain('order.no_route');
   });
 
+  it('detects invalid product material and component dependencies', () => {
+    const plant = plantSchema.parse(readFixture('minimal-valid-plant.json'));
+
+    const result = validatePlant({
+      ...plant,
+      products: [
+        ...plant.products,
+        {
+          id: 'prod_bad',
+          name: 'Bad Product',
+          sku: 'BAD',
+          unit: 'kg',
+          materialId: 'mat_missing',
+          properties: {},
+          components: [
+            { productId: 'prod_missing', quantity: 1 },
+            { productId: 'prod_bad', quantity: 1 },
+          ],
+        },
+      ],
+    });
+
+    const codes = result.issues.map((issue) => issue.code);
+    expect(result.status).toBe('not_ready');
+    expect(codes).toContain('product.unknown_material');
+    expect(codes).toContain('product_component.unknown_product');
+    expect(codes).toContain('product_component.self_reference');
+  });
+
   it('creates a baseline scenario for a plant', () => {
     const plant = plantSchema.parse(readFixture('minimal-valid-plant.json'));
     const scenario = createScenario(plant);

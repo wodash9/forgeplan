@@ -14,6 +14,7 @@ export function createEmptyPlant(overrides: Partial<Plant> = {}): Plant {
     timeHorizon: 480,
     timeUnit: 'minute',
     materials: [],
+    products: [],
     nodes: [],
     connections: [],
     orders: [],

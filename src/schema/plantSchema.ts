@@ -30,6 +30,22 @@ export const materialSchema = z.object({
   compatibilityTags: z.array(z.string().min(1)).default([]),
 });
 
+export const productComponentSchema = z.object({
+  productId: z.string().min(1),
+  quantity: z.number().positive(),
+});
+
+export const productSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  sku: z.string().min(1),
+  unit: z.string().min(1),
+  family: z.string().min(1).optional(),
+  materialId: z.string().min(1).optional(),
+  properties: z.record(z.string()).default({}),
+  components: z.array(productComponentSchema).default([]),
+});
+
 export const plantNodeSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -69,6 +85,7 @@ export const plantSchema = z.object({
   timeHorizon: z.number().positive(),
   timeUnit: timeUnitSchema,
   materials: z.array(materialSchema),
+  products: z.array(productSchema).default([]),
   nodes: z.array(plantNodeSchema),
   connections: z.array(connectionSchema),
   orders: z.array(orderSchema),

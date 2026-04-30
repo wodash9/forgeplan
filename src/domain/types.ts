@@ -27,6 +27,22 @@ export interface Material {
   compatibilityTags: string[];
 }
 
+export interface ProductComponent {
+  productId: string;
+  quantity: number;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  unit: string;
+  family?: string | undefined;
+  materialId?: string | undefined;
+  properties: Record<string, string>;
+  components: ProductComponent[];
+}
+
 export interface PlantNode {
   id: string;
   name: string;
@@ -66,6 +82,7 @@ export interface Plant {
   timeHorizon: number;
   timeUnit: TimeUnit;
   materials: Material[];
+  products: Product[];
   nodes: PlantNode[];
   connections: Connection[];
   orders: Order[];
