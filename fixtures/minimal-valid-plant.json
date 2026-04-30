@@ -50,6 +50,7 @@
       "position": { "x": 240, "y": 100 },
       "capacity": 100,
       "processingTime": 30,
+      "productionMode": "batch",
       "compatibleMaterials": ["mat_feed"],
       "metadata": {}
     },

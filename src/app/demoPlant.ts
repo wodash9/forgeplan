@@ -51,7 +51,7 @@ export function createDemoPlant(): Plant {
     ],
     nodes: [
       createNode('node_source', 'Raw Input', 'source', 60, 140),
-      createNode('node_mixer', 'Mixer 1', 'mixer', 300, 140, { capacity: 100, processingTime: 30 }),
+      createNode('node_mixer', 'Mixer 1', 'mixer', 300, 140, { capacity: 100, processingTime: 30, productionMode: 'batch' }),
       createNode('node_dispatch', 'Dispatch', 'dispatch', 560, 140),
     ],
     connections: [

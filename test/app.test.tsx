@@ -218,6 +218,29 @@ describe('ForgePlan visual plant editor', () => {
     });
   });
 
+  it('tracks continuous and batch production mode on processing equipment', async () => {
+    const plant = createDemoPlant();
+    const mixer = plant.nodes.find((node) => node.id === 'node_mixer');
+    const flowNodes = buildEquipmentFlowNodes(plant, 'node_mixer', () => undefined);
+
+    expect(mixer?.productionMode).toBe('batch');
+    expect(flowNodes.find((node) => node.id === 'node_mixer')?.data).toMatchObject({
+      productionMode: 'batch',
+      productionModeLabel: 'Batch production',
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Open Mixer 1 properties' }));
+    expect(screen.getByLabelText('Production mode')).toHaveValue('batch');
+
+    await user.selectOptions(screen.getByLabelText('Production mode'), 'continuous');
+
+    expect(screen.getByLabelText('Production mode')).toHaveValue('continuous');
+    expect(screen.getByLabelText('Mixer 1 mixer equipment node')).toHaveTextContent('Continuous production');
+  });
+
   it('keeps controlled React Flow nodes initialized with stable measured dimensions during fast drags', () => {
     const flowNodes = buildEquipmentFlowNodes(createDemoPlant(), 'node_mixer', () => undefined);
 

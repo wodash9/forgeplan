@@ -14,6 +14,8 @@ export type NodeType =
   | 'sink'
   | 'custom';
 
+export type ProductionMode = 'continuous' | 'batch';
+
 export interface Position {
   x: number;
   y: number;
@@ -50,6 +52,7 @@ export interface PlantNode {
   position: Position;
   capacity?: number | undefined;
   processingTime?: number | undefined;
+  productionMode?: ProductionMode | undefined;
   compatibleMaterials?: string[] | undefined;
   metadata: Record<string, unknown>;
 }

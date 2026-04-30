@@ -1,4 +1,4 @@
-import type { Connection, Plant, PlantNode, Scenario } from '../domain/types.js';
+import type { Connection, Plant, PlantNode, ProductionMode, Scenario } from '../domain/types.js';
 import type { SolverModel, SolverObjective, SolverOperation, SolverPrecedence, SolverResource } from './types.js';
 
 const PROCESSING_NODE_TYPES = new Set<PlantNode['type']>(['machine', 'mixer', 'reactor', 'line', 'packaging', 'custom']);
@@ -72,11 +72,16 @@ function toSolverResource(node: PlantNode): SolverResource {
     nodeId: node.id,
     name: node.name,
     capacity: Math.max(1, Math.ceil(node.capacity ?? 1)),
+    productionMode: node.productionMode ?? defaultProductionMode(node.type),
   };
 }
 
 function isProcessingNode(node: PlantNode): boolean {
   return PROCESSING_NODE_TYPES.has(node.type);
+}
+
+function defaultProductionMode(type: PlantNode['type']): ProductionMode {
+  return type === 'line' ? 'continuous' : 'batch';
 }
 
 function estimateDuration(quantity: number, capacity: number): number {

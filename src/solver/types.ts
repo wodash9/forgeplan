@@ -1,4 +1,4 @@
-import type { Schedule, ScheduleStatus, TimeUnit } from '../domain/types.js';
+import type { Schedule, ScheduleStatus, TimeUnit, ProductionMode } from '../domain/types.js';
 
 export type SolverObjective = 'minimize_makespan' | 'minimize_total_tardiness';
 
@@ -7,6 +7,7 @@ export interface SolverResource {
   nodeId: string;
   name: string;
   capacity: number;
+  productionMode: ProductionMode;
 }
 
 export interface SolverOperation {

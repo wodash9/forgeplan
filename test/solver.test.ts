@@ -25,7 +25,7 @@ describe('ForgePlan solver IR', () => {
     expect(model.scenarioId).toBe(scenario.id);
     expect(model.horizon).toBe(480);
     expect(model.resources).toHaveLength(1);
-    expect(model.resources[0]).toMatchObject({ nodeId: 'node_mixer', capacity: 100 });
+    expect(model.resources[0]).toMatchObject({ nodeId: 'node_mixer', capacity: 100, productionMode: 'batch' });
     expect(model.operations).toHaveLength(1);
     expect(model.operations[0]).toMatchObject({ orderId: 'order_1', nodeId: 'node_mixer', duration: 30, quantity: 80 });
     expect(model.objective).toBe('minimize_makespan');

@@ -17,6 +17,8 @@ export const nodeTypeSchema = z.enum([
   'custom',
 ]);
 
+export const productionModeSchema = z.enum(['continuous', 'batch']);
+
 export const positionSchema = z.object({
   x: z.number().finite(),
   y: z.number().finite(),
@@ -53,6 +55,7 @@ export const plantNodeSchema = z.object({
   position: positionSchema,
   capacity: z.number().positive().optional(),
   processingTime: z.number().positive().optional(),
+  productionMode: productionModeSchema.optional(),
   compatibleMaterials: z.array(z.string().min(1)).optional(),
   metadata: z.record(z.unknown()).default({}),
 });

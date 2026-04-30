@@ -18,7 +18,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { Connection as PlantConnection, Plant, PlantNode, Product, ProductComponent, Schedule } from '../domain/types.js';
+import type { Connection as PlantConnection, Plant, PlantNode, Product, ProductComponent, ProductionMode, Schedule } from '../domain/types.js';
 import { createScenario } from '../domain/defaults.js';
 import { plantSchema } from '../schema/plantSchema.js';
 import { buildSolverModel, mockSolverAdapter } from '../solver/index.js';
@@ -61,6 +61,12 @@ const equipmentVisuals: Record<PlantNode['type'], EquipmentVisual> = {
 };
 
 const equipmentTypes = Object.keys(nodeLabels) as PlantNode['type'][];
+const productionModeLabels: Record<ProductionMode, string> = {
+  continuous: 'Continuous production',
+  batch: 'Batch production',
+};
+const productionModeOptions = Object.keys(productionModeLabels) as ProductionMode[];
+const productionModeNodeTypes = new Set<PlantNode['type']>(['machine', 'mixer', 'reactor', 'line', 'packaging', 'custom']);
 const equipmentNodeMeasuredSize = { width: 136, height: 146 } as const;
 export const plantNodeDragExtent: CoordinateExtent = [[-10_000, -10_000], [10_000, 10_000]];
 export const plantCanvasMinZoom = 0.1;
@@ -70,6 +76,8 @@ interface FlowNodeData extends Record<string, unknown> {
   nodeType: PlantNode['type'];
   capacity?: number | undefined;
   processingTime?: number | undefined;
+  productionMode?: ProductionMode | undefined;
+  productionModeLabel?: string | undefined;
   customTypeName?: string | undefined;
   isaTag?: string | undefined;
   customProperties?: Record<string, string> | undefined;
@@ -152,6 +160,7 @@ type CustomNodeInput = {
   isaTag?: string | undefined;
   capacity?: number | undefined;
   processingTime?: number | undefined;
+  productionMode?: ProductionMode | undefined;
   customProperties?: Record<string, string> | undefined;
 };
 
@@ -203,6 +212,23 @@ function formatCustomProperties(value: unknown): string {
   return Object.entries(value as Record<string, unknown>)
     .map(([key, item]) => `${key}=${typeof item === 'string' ? item : String(item)}`)
     .join('\n');
+}
+
+function supportsProductionMode(type: PlantNode['type']): boolean {
+  return productionModeNodeTypes.has(type);
+}
+
+function defaultProductionModeForType(type: PlantNode['type']): ProductionMode {
+  return type === 'line' ? 'continuous' : 'batch';
+}
+
+function productionModeForNode(node: PlantNode): ProductionMode | undefined {
+  if (!supportsProductionMode(node.type)) return undefined;
+  return node.productionMode ?? defaultProductionModeForType(node.type);
+}
+
+function productionModeLabel(mode: ProductionMode | undefined): string | undefined {
+  return mode ? productionModeLabels[mode] : undefined;
 }
 
 function slugifyProductName(value: string): string {
@@ -507,6 +533,7 @@ export function addCustomPlantNode(plant: Plant, input: CustomNodeInput = {}): {
   const node = createNode(id, name, 'custom', 160 + nextIndex * 54, 280, {
     capacity: input.capacity,
     processingTime: input.processingTime,
+    productionMode: input.productionMode ?? 'batch',
     metadata: {
       customTypeName: input.customTypeName?.trim() || 'Custom equipment',
       isaTag: input.isaTag?.trim() || `USR-${String(nextIndex).padStart(3, '0')}`,
@@ -523,25 +550,30 @@ export function buildEquipmentFlowNodes(
   selectNode: (nodeId: string) => void,
   openProperties: (nodeId: string) => void = selectNode,
 ): Node<FlowNodeData>[] {
-  return plant.nodes.map((node) => ({
-    id: node.id,
-    type: 'equipment',
-    position: node.position,
-    measured: equipmentNodeMeasuredSize,
-    selected: node.id === selectedNodeId,
-    data: {
-      label: node.name,
-      nodeType: node.type,
-      capacity: node.capacity,
-      processingTime: node.processingTime,
-      customTypeName: metadataString(node.metadata, 'customTypeName'),
-      isaTag: metadataString(node.metadata, 'isaTag'),
-      customProperties: customPropertiesFromMetadata(node.metadata),
-      onSelectNode: selectNode,
-      onOpenProperties: openProperties,
-    },
-    className: `plant-flow-node ${node.type}`,
-  }));
+  return plant.nodes.map((node) => {
+    const productionMode = productionModeForNode(node);
+    return {
+      id: node.id,
+      type: 'equipment',
+      position: node.position,
+      measured: equipmentNodeMeasuredSize,
+      selected: node.id === selectedNodeId,
+      data: {
+        label: node.name,
+        nodeType: node.type,
+        capacity: node.capacity,
+        processingTime: node.processingTime,
+        productionMode,
+        productionModeLabel: productionModeLabel(productionMode),
+        customTypeName: metadataString(node.metadata, 'customTypeName'),
+        isaTag: metadataString(node.metadata, 'isaTag'),
+        customProperties: customPropertiesFromMetadata(node.metadata),
+        onSelectNode: selectNode,
+        onOpenProperties: openProperties,
+      },
+      className: `plant-flow-node ${node.type}`,
+    };
+  });
 }
 
 export function addPlantConnection(plant: Plant, connection: ConnectPayload): Plant {
@@ -747,6 +779,7 @@ export default function App() {
     const mixer = createNode(id, `Mixer ${nextIndex}`, 'mixer', 280 + nextIndex * 36, 260, {
       capacity: 100,
       processingTime: 30,
+      productionMode: 'batch',
     });
     setPlant((current) => ({ ...current, nodes: [...current.nodes, mixer] }));
     setSelectedNodeId(id);
@@ -981,7 +1014,9 @@ export default function App() {
               </span>
               <div>
                 <h2>{selectedNode.name}</h2>
-                <p>{nodeLabels[selectedNode.type]} · x {Math.round(selectedNode.position.x)}, y {Math.round(selectedNode.position.y)}</p>
+                <p>
+                  {nodeLabels[selectedNode.type]} · {productionModeLabel(productionModeForNode(selectedNode)) ?? 'No production mode'} · x {Math.round(selectedNode.position.x)}, y {Math.round(selectedNode.position.y)}
+                </p>
               </div>
               <button type="button" className="text-action" onClick={() => openProperties(selectedNode.id)}>
                 Edit properties
@@ -1391,9 +1426,10 @@ function EquipmentFlowNode({ id, data, selected }: NodeProps<Node<FlowNodeData>>
       <div className="iso-equipment-caption">
         <strong>{data.label}</strong>
         <span>{visual.title}</span>
-        {(data.capacity || data.processingTime) && (
+        {(data.capacity || data.processingTime || data.productionModeLabel) && (
           <small>
             {data.capacity ? `${data.capacity} cap` : 'No cap'} · {data.processingTime ? `${data.processingTime} min` : 'No time'}
+            {data.productionModeLabel ? ` · ${data.productionModeLabel}` : ''}
           </small>
         )}
       </div>
@@ -1617,6 +1653,7 @@ function CreateCustomNodeDialog({ onCreate, onClose }: { onCreate: (input: Custo
   const [isaTag, setIsaTag] = useState('USR-001');
   const [capacity, setCapacity] = useState('100');
   const [processingTime, setProcessingTime] = useState('15');
+  const [productionMode, setProductionMode] = useState<ProductionMode>('batch');
   const [customProperties, setCustomProperties] = useState('');
 
   return (
@@ -1653,6 +1690,14 @@ function CreateCustomNodeDialog({ onCreate, onClose }: { onCreate: (input: Custo
             Processing time
             <input type="number" min="1" value={processingTime} onChange={(event) => setProcessingTime(event.target.value)} />
           </label>
+          <label>
+            Production mode
+            <select value={productionMode} onChange={(event) => setProductionMode(event.target.value as ProductionMode)}>
+              {productionModeOptions.map((mode) => (
+                <option key={mode} value={mode}>{productionModeLabels[mode]}</option>
+              ))}
+            </select>
+          </label>
           <label className="full-width-field">
             Custom properties
             <textarea
@@ -1678,6 +1723,7 @@ function CreateCustomNodeDialog({ onCreate, onClose }: { onCreate: (input: Custo
               isaTag,
               capacity: capacity === '' ? undefined : Number(capacity),
               processingTime: processingTime === '' ? undefined : Number(processingTime),
+              productionMode,
               customProperties: parseCustomProperties(customProperties),
             })}
           >
@@ -1761,6 +1807,19 @@ function NodePropertiesDialog({
               onChange={(event) => onChange({ processingTime: event.target.value === '' ? undefined : Number(event.target.value) })}
             />
           </label>
+          {supportsProductionMode(node.type) && (
+            <label>
+              Production mode
+              <select
+                value={productionModeForNode(node) ?? defaultProductionModeForType(node.type)}
+                onChange={(event) => onChange({ productionMode: event.target.value as ProductionMode })}
+              >
+                {productionModeOptions.map((mode) => (
+                  <option key={mode} value={mode}>{productionModeLabels[mode]}</option>
+                ))}
+              </select>
+            </label>
+          )}
           {node.type === 'custom' && (
             <label className="full-width-field">
               Custom properties
