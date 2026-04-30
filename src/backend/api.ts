@@ -1,11 +1,18 @@
+import { randomUUID } from 'node:crypto';
+
 import { buildSolverModel, mockSolverAdapter } from '../solver/index.js';
+import { OrToolsCpSatAdapter } from '../solver/node.js';
 import { createScenario } from '../domain/defaults.js';
-import type { Plant, Scenario, Schedule, ValidationResult } from '../domain/types.js';
+import type { Plant, Scenario, Schedule, SolverStrategy, ValidationResult } from '../domain/types.js';
+import type { SolverAdapter, SolverOptions } from '../solver/types.js';
 import { validatePlant } from '../validation/validatePlant.js';
 import { ForgePlanLocalStore, StoreRelationshipError, StoreValidationError } from '../storage/localStore.js';
 
+export type ApiSolveStrategy = Extract<SolverStrategy, 'mock' | 'cp_sat'>;
+
 export interface ForgePlanApiOptions {
   store: ForgePlanLocalStore;
+  solverAdapters?: Partial<Record<ApiSolveStrategy, SolverAdapter>> | undefined;
 }
 
 export interface ForgePlanApi {
@@ -13,14 +20,16 @@ export interface ForgePlanApi {
 }
 
 const BACKEND_MODELS = ['Plant', 'Material', 'PlantNode', 'Connection', 'Order', 'Scenario', 'Schedule', 'StoreEvent'] as const;
+const MAX_SOLVE_TIME_LIMIT_SECONDS = 300;
+const MAX_SOLVE_WORKERS = 16;
 
-export function createForgePlanApi({ store }: ForgePlanApiOptions): ForgePlanApi {
+export function createForgePlanApi({ store, solverAdapters = {} }: ForgePlanApiOptions): ForgePlanApi {
   return {
-    fetch: (request) => handleApiRequest(store, request),
+    fetch: (request) => handleApiRequest(store, request, solverAdapters),
   };
 }
 
-async function handleApiRequest(store: ForgePlanLocalStore, request: Request): Promise<Response> {
+async function handleApiRequest(store: ForgePlanLocalStore, request: Request, solverAdapters: Partial<Record<ApiSolveStrategy, SolverAdapter>>): Promise<Response> {
   try {
     const url = new URL(request.url);
     const segments = url.pathname.split('/').filter(Boolean);
@@ -36,14 +45,15 @@ async function handleApiRequest(store: ForgePlanLocalStore, request: Request): P
       return jsonResponse({ models: describeBackendModels() });
     }
 
-    if (segments[1] === 'plants') return await handlePlants(store, request, segments);
+    if (segments[1] === 'plants') return await handlePlants(store, request, segments, solverAdapters);
     if (segments[1] === 'scenarios') return await handleScenarios(store, request, segments, url);
     if (segments[1] === 'schedules') return await handleSchedules(store, request, segments, url);
     if (segments[1] === 'events' && request.method === 'GET') {
       return jsonResponse(store.listEvents(parseEventLimit(url.searchParams.get('limit'))));
     }
-    if (segments[1] === 'solve' && segments[2] === 'mock' && request.method === 'POST') {
-      return await handleMockSolve(store, request);
+    const solveStrategy = parseSolveStrategy(segments[2]);
+    if (segments[1] === 'solve' && solveStrategy && request.method === 'POST') {
+      return await handleSolve(store, request, solveStrategy, solverAdapters);
     }
 
     return errorResponse(404, 'not_found', `Route ${url.pathname} does not exist.`);
@@ -52,7 +62,7 @@ async function handleApiRequest(store: ForgePlanLocalStore, request: Request): P
   }
 }
 
-async function handlePlants(store: ForgePlanLocalStore, request: Request, segments: string[]): Promise<Response> {
+async function handlePlants(store: ForgePlanLocalStore, request: Request, segments: string[], solverAdapters: Partial<Record<ApiSolveStrategy, SolverAdapter>>): Promise<Response> {
   if (segments.length === 2 && request.method === 'GET') return jsonResponse(store.listPlants());
   if (segments.length === 2 && request.method === 'POST') {
     const plant = store.savePlant(await parseJsonBody(request));
@@ -83,7 +93,12 @@ async function handlePlants(store: ForgePlanLocalStore, request: Request, segmen
   }
   if (segments.length === 4 && segments[3] === 'readiness' && request.method === 'GET') return jsonResponse(validatePlant(plant) satisfies ValidationResult);
   if (segments.length === 4 && segments[3] === 'export' && request.method === 'GET') return jsonResponse({ json: store.exportPlantJson(plant.id) });
-  if (segments.length === 4 && segments[3] === 'solve' && request.method === 'POST') return handleMockSolve(store, request, decodeURIComponent(plantId));
+  if (segments.length === 4 && segments[3] === 'solve' && request.method === 'POST') {
+    const body = await parseJsonBody(request) as { strategy?: unknown };
+    const requestedStrategy = parseSolveStrategy(typeof body.strategy === 'string' ? body.strategy : 'mock');
+    if (!requestedStrategy) return errorResponse(400, 'invalid_body', 'Plant solve expects strategy "mock" or "cp_sat".');
+    return handleSolveFromBody(store, body, requestedStrategy, solverAdapters, decodeURIComponent(plantId));
+  }
 
   return errorResponse(404, 'not_found', 'Plant route does not exist.');
 }
@@ -134,34 +149,116 @@ function handleSchedules(store: ForgePlanLocalStore, request: Request, segments:
   return errorResponse(404, 'not_found', 'Schedule route does not exist.');
 }
 
-async function handleMockSolve(store: ForgePlanLocalStore, request: Request, routePlantId?: string): Promise<Response> {
-  const body = await parseJsonBody(request) as { plantId?: unknown; scenarioId?: unknown };
+interface SolveRequestBody {
+  plantId?: unknown;
+  scenarioId?: unknown;
+  timeLimitSeconds?: unknown;
+  workers?: unknown;
+  strategy?: unknown;
+}
+
+async function handleSolve(store: ForgePlanLocalStore, request: Request, strategy: ApiSolveStrategy, solverAdapters: Partial<Record<ApiSolveStrategy, SolverAdapter>>): Promise<Response> {
+  return handleSolveFromBody(store, await parseJsonBody(request) as SolveRequestBody, strategy, solverAdapters);
+}
+
+function handleSolveFromBody(
+  store: ForgePlanLocalStore,
+  body: SolveRequestBody,
+  strategy: ApiSolveStrategy,
+  solverAdapters: Partial<Record<ApiSolveStrategy, SolverAdapter>>,
+  routePlantId?: string,
+): Response {
   const plantId = routePlantId ?? body.plantId;
   if (typeof plantId !== 'string' || plantId.trim().length === 0) {
-    return errorResponse(400, 'invalid_body', 'Mock solve expects a plantId string.');
+    return errorResponse(400, 'invalid_body', `${strategyLabel(strategy)} solve expects a plantId string.`);
   }
 
   const plant = store.getPlant(plantId);
   if (!plant) return errorResponse(404, 'not_found', `Plant ${plantId} does not exist.`);
 
-  const scenario = resolveScenario(store, plant, typeof body.scenarioId === 'string' ? body.scenarioId : undefined);
-  const solverModel = buildSolverModel(plant, scenario);
-  const result = mockSolverAdapter.solve(solverModel);
+  const requestedOptions = parseSolveOptions(body);
+  const scenario = resolveScenario(store, plant, typeof body.scenarioId === 'string' ? body.scenarioId : undefined, strategy, requestedOptions, body);
+  const solveOptions: SolverOptions = {
+    timeLimitSeconds: body.timeLimitSeconds === undefined ? scenario.solverSettings.timeLimitSeconds : requestedOptions.timeLimitSeconds,
+    workers: body.workers === undefined ? scenario.solverSettings.workers : requestedOptions.workers,
+  };
+  const solverModel = buildSolverModel(plant, scenario, { objective: strategy === 'cp_sat' ? 'minimize_total_tardiness' : 'minimize_makespan' });
+  const adapter = solverAdapters[strategy] ?? createDefaultSolveAdapter(strategy);
+  const result = adapter.solve(solverModel, solveOptions);
   const schedule = store.saveSchedule(result.schedule);
 
   return jsonResponse({ status: result.status, issues: result.issues, scenario, schedule }, 201);
 }
 
-function resolveScenario(store: ForgePlanLocalStore, plant: Plant, scenarioId?: string): Scenario {
+function createDefaultSolveAdapter(strategy: ApiSolveStrategy): SolverAdapter {
+  if (strategy === 'cp_sat') return new OrToolsCpSatAdapter({ pythonBinary: process.env.FORGEPLAN_PYTHON_BINARY });
+  return mockSolverAdapter;
+}
+
+function parseSolveOptions(body: SolveRequestBody): SolverOptions {
+  return {
+    timeLimitSeconds: parsePositiveNumber(body.timeLimitSeconds, 30, MAX_SOLVE_TIME_LIMIT_SECONDS, 'timeLimitSeconds'),
+    workers: parsePositiveInteger(body.workers, 1, MAX_SOLVE_WORKERS, 'workers'),
+  };
+}
+
+function parsePositiveNumber(value: unknown, fallback: number, max: number, field: string): number {
+  if (value === undefined) return fallback;
+  const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > max) {
+    throw new InvalidSolveOptionsError(`${field} must be a positive number no greater than ${max}.`);
+  }
+  return parsed;
+}
+
+function parsePositiveInteger(value: unknown, fallback: number, max: number, field: string): number {
+  const parsed = parsePositiveNumber(value, fallback, max, field);
+  if (!Number.isInteger(parsed)) throw new InvalidSolveOptionsError(`${field} must be a positive integer.`);
+  return parsed;
+}
+
+function parseSolveStrategy(rawStrategy: string | undefined): ApiSolveStrategy | undefined {
+  if (rawStrategy === 'mock') return 'mock';
+  if (rawStrategy === 'cp_sat' || rawStrategy === 'cp-sat') return 'cp_sat';
+  return undefined;
+}
+
+function strategyLabel(strategy: ApiSolveStrategy): string {
+  return strategy === 'cp_sat' ? 'CP-SAT' : 'Mock';
+}
+
+function resolveScenario(store: ForgePlanLocalStore, plant: Plant, scenarioId: string | undefined, strategy: ApiSolveStrategy = 'mock', options?: SolverOptions, body: SolveRequestBody = {}): Scenario {
   if (scenarioId) {
     const scenario = store.getScenario(scenarioId);
     if (!scenario) throw new NotFoundError(`Scenario ${scenarioId} does not exist.`);
     if (scenario.plantId !== plant.id) {
       throw new StoreRelationshipError(`Scenario ${scenario.id} belongs to plant ${scenario.plantId}, not ${plant.id}.`);
     }
+    ensureScenarioMatchesSolveRequest(scenario, strategy, options, body);
     return scenario;
   }
-  return store.saveScenario(createScenario(plant));
+  return store.saveScenario(createScenario(plant, {
+    id: `scenario_${plant.id}_${strategy}_${randomUUID()}`,
+    name: `${plant.name} ${strategyLabel(strategy)} solve`,
+    createdAt: new Date().toISOString(),
+    solverSettings: {
+      strategy,
+      timeLimitSeconds: options?.timeLimitSeconds ?? 30,
+      workers: options?.workers ?? 1,
+    },
+  }));
+}
+
+function ensureScenarioMatchesSolveRequest(scenario: Scenario, strategy: ApiSolveStrategy, options?: SolverOptions, body: SolveRequestBody = {}): void {
+  if (scenario.solverSettings.strategy !== strategy) {
+    throw new StoreRelationshipError(`Scenario ${scenario.id} is configured for ${scenario.solverSettings.strategy}, not ${strategy}.`);
+  }
+  if (body.timeLimitSeconds !== undefined && options?.timeLimitSeconds !== scenario.solverSettings.timeLimitSeconds) {
+    throw new StoreRelationshipError(`Scenario ${scenario.id} time limit is ${scenario.solverSettings.timeLimitSeconds}, not ${options?.timeLimitSeconds}.`);
+  }
+  if (body.workers !== undefined && options?.workers !== scenario.solverSettings.workers) {
+    throw new StoreRelationshipError(`Scenario ${scenario.id} workers setting is ${scenario.solverSettings.workers}, not ${options?.workers}.`);
+  }
 }
 
 function parseEventLimit(rawLimit: string | null): number {
@@ -210,6 +307,7 @@ function errorResponse(status: number, code: string, message: string, details?: 
 
 function mapErrorToResponse(error: unknown): Response {
   if (error instanceof InvalidJsonError) return errorResponse(400, 'invalid_json', error.message);
+  if (error instanceof InvalidSolveOptionsError) return errorResponse(400, 'invalid_body', error.message);
   if (error instanceof NotFoundError) return errorResponse(404, 'not_found', error.message);
   if (error instanceof StoreRelationshipError) return errorResponse(422, 'invalid_relationship', error.message);
   if (error instanceof StoreValidationError) return errorResponse(422, 'validation_error', error.message, error.issues);
@@ -236,4 +334,5 @@ function describeBackendModels() {
 }
 
 class InvalidJsonError extends Error {}
+class InvalidSolveOptionsError extends Error {}
 class NotFoundError extends Error {}

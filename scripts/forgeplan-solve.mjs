@@ -7,6 +7,7 @@ function parseArgs(argv) {
   const args = {
     strategy: 'mock',
     timeLimitSeconds: 30,
+    workers: 1,
     pythonBinary: undefined,
   };
 
@@ -16,6 +17,8 @@ function parseArgs(argv) {
       args.strategy = argv[++index];
     } else if (arg === '--time-limit') {
       args.timeLimitSeconds = Number(argv[++index]);
+    } else if (arg === '--workers') {
+      args.workers = Number(argv[++index]);
     } else if (arg === '--python') {
       args.pythonBinary = argv[++index];
     } else if (arg === '--help' || arg === '-h') {
@@ -31,7 +34,7 @@ function parseArgs(argv) {
 }
 
 function usage() {
-  return `Usage: node scripts/forgeplan-solve.mjs <plant.json> [--strategy mock|cp_sat] [--time-limit seconds] [--python python3]\n\nExamples:\n  node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json\n  node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json --strategy cp_sat --time-limit 5\n`;
+  return `Usage: node scripts/forgeplan-solve.mjs <plant.json> [--strategy mock|cp_sat] [--time-limit seconds] [--workers count] [--python python3]\n\nExamples:\n  node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json\n  node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json --strategy cp_sat --time-limit 5 --workers 4\n`;
 }
 
 try {
@@ -46,6 +49,9 @@ try {
   if (!Number.isFinite(args.timeLimitSeconds) || args.timeLimitSeconds <= 0) {
     throw new Error('--time-limit must be a positive number.');
   }
+  if (!Number.isInteger(args.workers) || args.workers <= 0) {
+    throw new Error('--workers must be a positive integer.');
+  }
 
   const indexModule = await import(pathToFileURL(resolve('dist/src/index.js')));
   const nodeModule = await import(pathToFileURL(resolve('dist/src/solver/node.js')));
@@ -54,6 +60,7 @@ try {
   const result = nodeModule.runLocalSolve(plant, {
     strategy: args.strategy,
     timeLimitSeconds: args.timeLimitSeconds,
+    workers: args.workers,
     pythonBinary: args.pythonBinary,
   });
 

@@ -13,11 +13,14 @@ export interface LocalSolveOptions extends SolverOptions {
 
 export function runLocalSolve(plant: Plant, options: LocalSolveOptions = {}): SolverResult {
   const strategy = options.strategy ?? 'mock';
-  const scenario = options.scenario ?? createScenario(plant, { solverSettings: { strategy, timeLimitSeconds: options.timeLimitSeconds ?? 30, workers: 1 } });
-  const model = buildSolverModel(plant, scenario);
+  const scenario = options.scenario ?? createScenario(plant, { solverSettings: { strategy, timeLimitSeconds: options.timeLimitSeconds ?? 30, workers: options.workers ?? 1 } });
+  const model = buildSolverModel(plant, scenario, { objective: strategy === 'cp_sat' ? 'minimize_total_tardiness' : 'minimize_makespan' });
   const adapter = createLocalSolverAdapter(strategy, options);
 
-  return adapter.solve(model, { timeLimitSeconds: options.timeLimitSeconds ?? scenario.solverSettings.timeLimitSeconds });
+  return adapter.solve(model, {
+    timeLimitSeconds: options.timeLimitSeconds ?? scenario.solverSettings.timeLimitSeconds,
+    workers: options.workers ?? scenario.solverSettings.workers,
+  });
 }
 
 export function createLocalSolverAdapter(strategy: LocalSolveOptions['strategy'], options: LocalSolveOptions = {}): SolverAdapter {

@@ -59,7 +59,13 @@ export class OrToolsCpSatAdapter implements SolverAdapter {
       };
     }
 
-    const payload = JSON.stringify({ model, options: { timeLimitSeconds: options.timeLimitSeconds ?? 10 } });
+    const payload = JSON.stringify({
+      model,
+      options: {
+        timeLimitSeconds: options.timeLimitSeconds ?? 10,
+        workers: options.workers ?? 1,
+      },
+    });
     const run = spawnSync(this.pythonBinary, ['-c', ORTOOLS_CP_SAT_WORKER], {
       input: payload,
       encoding: 'utf8',
@@ -148,6 +154,7 @@ payload = json.load(sys.stdin)
 model_data = payload["model"]
 options = payload.get("options", {})
 time_limit_seconds = float(options.get("timeLimitSeconds", 10))
+workers = max(1, int(options.get("workers", 1)))
 
 model = cp_model.CpModel()
 horizon = int(model_data["horizon"])
@@ -187,11 +194,38 @@ if operations:
 else:
     model.Add(makespan == 0)
 
-model.Minimize(makespan)
+completion_vars = {}
+tardiness_vars = []
+late_vars = []
+for order_id, order in orders.items():
+    order_end_vars = [end_vars[op["id"]] for op in operations if op["orderId"] == order_id]
+    completion = model.NewIntVar(0, horizon, "completion_" + order_id)
+    if order_end_vars:
+        model.AddMaxEquality(completion, order_end_vars)
+    else:
+        model.Add(completion == 0)
+    completion_vars[order_id] = completion
+    due_time = int(order["dueTime"])
+    tardiness = model.NewIntVar(0, horizon, "tardiness_" + order_id)
+    model.Add(tardiness >= completion - due_time)
+    model.Add(tardiness >= 0)
+    late = model.NewBoolVar("late_" + order_id)
+    model.Add(completion >= due_time + 1).OnlyEnforceIf(late)
+    model.Add(completion <= due_time).OnlyEnforceIf(late.Not())
+    tardiness_vars.append(tardiness)
+    late_vars.append(late)
+
+if model_data.get("objective") == "minimize_total_tardiness":
+    # First CP-SAT integration mirrors the thesis/OptiPlan lexicographic intent with
+    # a stable weighted objective: avoid late orders first, then reduce tardiness,
+    # then compact makespan. Full multi-pass lexicographic optimization can build on this.
+    model.Minimize(sum(late_vars) * max(1, horizon * 1000) + sum(tardiness_vars) * 100 + makespan)
+else:
+    model.Minimize(makespan)
 
 solver = cp_model.CpSolver()
 solver.parameters.max_time_in_seconds = time_limit_seconds
-solver.parameters.num_search_workers = 1
+solver.parameters.num_search_workers = workers
 status = solver.Solve(model)
 
 status_map = {
@@ -247,7 +281,8 @@ print(json.dumps({
     "violations": violations,
     "explanations": [
         "Solved locally with Google OR-Tools CP-SAT via the ForgePlan Solver IR.",
-        "This first adapter supports fixed-resource operations, no-overlap, route precedences, horizon, and makespan minimization.",
+        "This first adapter supports fixed-resource operations, no-overlap, route precedences, earliest starts, horizon, due-date tardiness KPIs, and weighted late/tardiness/makespan optimization.",
+        "V1 covers the PFG/OptiPlan core sequencing layer; silo assignment, inventory reservoirs, batching splits, and sequence-dependent cleanings are documented as next solver-model layers.",
     ],
 }))
 `;

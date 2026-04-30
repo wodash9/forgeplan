@@ -64,6 +64,7 @@ export interface SolverValidationResult {
 
 export interface SolverOptions {
   timeLimitSeconds?: number | undefined;
+  workers?: number | undefined;
 }
 
 export interface SolverResult {

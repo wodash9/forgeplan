@@ -2,7 +2,7 @@
 
 ForgePlan is a local-first platform for modeling production plants, validating feasibility, and eventually optimizing production schedules.
 
-This repository currently contains the local-first ForgePlan foundation through **Phase 5.1: Local Solve Command Boundary**.
+This repository currently contains the local-first ForgePlan foundation through **Phase 6: Local Planner Backend + CP-SAT V1**.
 
 ## Current scope
 
@@ -21,13 +21,15 @@ Included:
 - simple Gantt/timeline schedule visualization
 - local OR-Tools CP-SAT adapter for Node/Python environments
 - local solve CLI boundary for mock/CP-SAT schedules
+- local HTTP API backed by SQLite for plants, scenarios, schedules, events and solve requests
+- product catalog with simple BOM/dependency graph
+- equipment production modes: continuous or batch
 - minimal valid/invalid JSON fixtures
 - unit tests
 
 Not included yet:
 
 - advanced custom node asset library
-- local HTTP API
 - CP-SAT integration in the web UI
 - advanced CP-SAT production features such as setups, batching, alternate machines, calendars, and cumulative capacity
 - networking/cloud
@@ -80,17 +82,35 @@ ForgePlan translates canonical `Plant + Scenario` data into a solver-neutral `So
 
 The `MockSolverAdapter` creates deterministic feasible/infeasible schedules for integration tests and UI plumbing. It does not optimize and should not be used for production decisions.
 
-Node-only solver integrations live behind separate imports so the browser bundle stays clean. `OrToolsCpSatAdapter` runs a local Python OR-Tools CP-SAT worker through stdin/stdout JSON and supports fixed-resource operations, no-overlap, route precedences, horizon, and makespan minimization. It fails explicitly when Python or OR-Tools is unavailable; this repository does not install OR-Tools automatically.
+Node-only solver integrations live behind separate imports so the browser bundle stays clean. `OrToolsCpSatAdapter` runs a local Python OR-Tools CP-SAT worker through stdin/stdout JSON and supports fixed-resource operations, no-overlap, route precedences, earliest starts, due-date tardiness KPIs, horizon, and a weighted late/tardiness/makespan objective. It fails explicitly when Python or OR-Tools is unavailable; this repository does not install OR-Tools automatically. See `docs/solver-cpsat-v1.md` for the PFG/OptiPlan constraints covered in V1 and the layers still pending.
 
 Run a local solve from a built checkout:
 
 ```bash
 npm run build
 npm run solve -- fixtures/minimal-valid-plant.json --strategy mock
-npm run solve -- fixtures/minimal-valid-plant.json --strategy cp_sat --time-limit 5
+npm run solve -- fixtures/minimal-valid-plant.json --strategy cp_sat --time-limit 5 --workers 4
 ```
 
 The command prints canonical `Schedule` JSON to stdout. `mock` is the safe default; `cp_sat` requires local Python OR-Tools. TypeScript build artifacts go to `dist/`; Vite web artifacts go to `dist-web/` so the local solve CLI remains available after web builds.
+
+## Local HTTP API
+
+Start the local API/server after building:
+
+```bash
+FORGEPLAN_PYTHON_BINARY=/path/to/python-with-ortools npm run server
+```
+
+Useful solve endpoints:
+
+- `POST /api/solve/mock` with `{ "plantId": "..." }`
+- `POST /api/solve/cp-sat` with `{ "plantId": "...", "timeLimitSeconds": 10, "workers": 4 }`
+- `POST /api/plants/:plantId/solve` with `{ "strategy": "cp_sat" }`
+
+Solve runtime settings are bounded for local availability: `timeLimitSeconds <= 300` and `workers <= 16`. Each solve without an explicit `scenarioId` creates a fresh immutable scenario so schedules keep accurate strategy/options provenance.
+
+Schedules produced by either strategy are validated, stored in SQLite, and recorded in the append-only event log.
 
 ## Web editor
 
@@ -106,4 +126,4 @@ Use **Run mock solve** to build a local solver model, run the deterministic mock
 
 ## Next phase candidate
 
-ForgePlan 5.2 — richer CP-SAT model features such as setup times, alternate machines, batching, and cumulative capacity; or ForgePlan 5.3 — connect UI solve strategy selection to the local command/API boundary.
+ForgePlan next solver layers — connect CP-SAT strategy selection to the web UI, then add PFG/OptiPlan production constraints incrementally: batching/lots, setup times, silo assignment/inventory reservoirs, alternate machines and decomposed/lexicographic solving.

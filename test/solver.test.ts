@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -10,6 +11,7 @@ import {
   validateSolverModel,
   type SolverModel,
 } from '../src/index.js';
+import { OrToolsCpSatAdapter } from '../src/solver/node.js';
 
 function readFixture(name: string): unknown {
   return JSON.parse(readFileSync(join(process.cwd(), 'fixtures', name), 'utf8'));
@@ -84,5 +86,37 @@ describe('ForgePlan solver IR', () => {
     expect(result.status).toBe('infeasible');
     expect(result.schedule.status).toBe('infeasible');
     expect(result.schedule.violations[0]).toContain('exceeds horizon');
+  });
+
+  it('passes CP-SAT runtime options to the local Python worker boundary', () => {
+    const plant = plantSchema.parse(readFixture('minimal-valid-plant.json'));
+    const scenario = createScenario(plant);
+    const model = buildSolverModel(plant, scenario, { objective: 'minimize_total_tardiness' });
+    const tempDir = mkdtempSync(join(tmpdir(), 'forgeplan-fake-python-'));
+    const capturePath = join(tempDir, 'payload.json');
+    const fakePython = join(tempDir, 'fake-python.mjs');
+    writeFileSync(fakePython, `#!/usr/bin/env node
+import { readFileSync, writeFileSync } from 'node:fs';
+const input = readFileSync(0, 'utf8');
+writeFileSync(${JSON.stringify(capturePath)}, input);
+const payload = JSON.parse(input);
+const op = payload.model.operations[0];
+process.stdout.write(JSON.stringify({
+  status: 'optimal',
+  operations: [{ id: 'scheduled_' + op.id, orderId: op.orderId, nodeId: op.nodeId, materialId: op.materialId, start: 0, end: op.duration, quantity: op.quantity }],
+  kpis: { lateOrders: 0, totalTardiness: 0, makespan: op.duration },
+  violations: [],
+  explanations: ['fake cp-sat worker']
+}));
+`);
+    chmodSync(fakePython, 0o755);
+
+    const result = new OrToolsCpSatAdapter({ pythonBinary: fakePython }).solve(model, { timeLimitSeconds: 9, workers: 3 });
+    const captured = JSON.parse(readFileSync(capturePath, 'utf8')) as { model: SolverModel; options: { timeLimitSeconds: number; workers: number } };
+
+    expect(result.status).toBe('optimal');
+    expect(result.schedule.strategy).toBe('cp_sat');
+    expect(captured.model.objective).toBe('minimize_total_tardiness');
+    expect(captured.options).toEqual({ timeLimitSeconds: 9, workers: 3 });
   });
 });
