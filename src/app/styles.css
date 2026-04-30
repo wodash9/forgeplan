@@ -63,6 +63,33 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .palette button + button { margin-top: 10px; }
 .palette button.secondary-action { background: #e2efe7; color: #17492e; }
+.solver-settings {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #d7ded4;
+  border-radius: 16px;
+  background: #f7faf5;
+}
+.solver-settings label {
+  display: grid;
+  gap: 5px;
+  color: #60726a;
+  font-size: 11px;
+  font-weight: 900;
+}
+.solver-settings select,
+.solver-settings input {
+  width: 100%;
+  border: 1px solid #c9d7cf;
+  border-radius: 10px;
+  padding: 8px 9px;
+  background: white;
+  color: #17382f;
+  font-weight: 800;
+}
+.cp-sat-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .palette button.planner-action { margin-top: 12px; background: #f59e0b; color: #17382f; box-shadow: 0 10px 24px rgb(245 158 11 / 24%); }
 .solver-demo-badge {
   display: inline-flex;
@@ -455,6 +482,8 @@ h1, h2, h3, p { margin-top: 0; }
   font-weight: 950;
   text-transform: uppercase;
 }
+.solve-status-copy { margin: 0 0 10px; color: #315744; font-size: 13px; font-weight: 800; }
+.solve-error { margin: 0 0 10px; color: #8f2415; font-size: 13px; font-weight: 800; }
 .solve-status {
   display: inline-flex;
   margin-bottom: 12px;

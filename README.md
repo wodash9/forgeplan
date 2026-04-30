@@ -33,7 +33,6 @@ Included:
 Not included yet:
 
 - advanced custom node asset library
-- CP-SAT integration in the web UI
 - fully decomposed/warm-start/true multi-pass lexicographic solver pipeline
 - networking/cloud
 
@@ -125,10 +124,19 @@ npm run dev
 
 The current editor uses React Flow / XYFlow for the node canvas, edges, selection, pan/zoom controls, and node dragging while keeping the canonical ForgePlan `Plant` model as the source of truth.
 
-The planner demo loop starts on **Planificación local de producción**. A planner can review and edit demo orders in **Pedidos a planificar**, click **Planificar pedidos**, and then inspect KPIs, a Gantt-style timeline, and **Qué ha pasado** with late orders, likely bottleneck, and next action. The UI is labelled **Solver demo** while it uses the deterministic mock solver.
+The planner demo loop starts on **Planificación local de producción**. A planner can review and edit demo orders in **Pedidos a planificar**, choose **Demo mock** or **CP-SAT local**, click **Planificar pedidos**, and then inspect KPIs, a Gantt-style timeline, and **Qué ha pasado** with late orders, likely bottleneck, and next action. The default UI path is labelled **Solver demo** while it uses the deterministic mock solver.
 
-Use **Planificar pedidos** to build a local solver model, run the deterministic mock solver, and preview status, KPIs, violations, scheduled operations, and a simple Gantt-style timeline. This is UI plumbing only; it is not real optimization yet.
+Use **Planificar pedidos** in **Demo mock** mode to build a local solver model in the browser, run the deterministic mock solver, and preview status, KPIs, violations, scheduled operations, and a simple Gantt-style timeline. This is UI plumbing only; it is not real optimization yet.
+
+To exercise **CP-SAT local** from the web UI, run the local API in another terminal and provide a Python with OR-Tools:
+
+```bash
+FORGEPLAN_PYTHON_BINARY=/path/to/python-with-ortools npm run server
+npm run dev
+```
+
+The browser posts the current plant to `http://127.0.0.1:8787/api/plants` and then calls `POST /api/solve/cp-sat` with the selected `timeLimitSeconds` and `workers`. The solver remains local; no cloud service is called.
 
 ## Next phase candidate
 
-ForgePlan next solver layer — connect CP-SAT strategy selection to the web UI, then harden the production solver with decomposed baseline, warm-start hints, true multi-pass lexicographic solving, calendars/maintenance windows and larger benchmark instances.
+ForgePlan next solver layer — harden the production solver with decomposed baseline, warm-start hints, true multi-pass lexicographic solving, calendars/maintenance windows and larger benchmark instances.

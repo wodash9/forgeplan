@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App, {
   addCustomPlantNode,
@@ -25,6 +25,7 @@ import { validatePlant } from '../src/validation/validatePlant.js';
 
 describe('ForgePlan visual plant editor', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     window.localStorage.clear();
   });
 
@@ -643,5 +644,61 @@ describe('ForgePlan visual plant editor', () => {
     expect(screen.getByLabelText('order_1 on Línia Dosificació LD from 0 to 45')).toBeInTheDocument();
     expect(screen.getByText(/0–45/)).toBeInTheDocument();
     expect(screen.getAllByText(/0 → 45/).length).toBeGreaterThan(0);
+  });
+
+  it('sends the current plant to the local CP-SAT API when the planner selects the real solver path', async () => {
+    const user = userEvent.setup();
+    const cpSatSchedule = {
+      id: 'schedule_cp_sat_ui_test',
+      plantId: 'plant_pfg_feed_production',
+      scenarioId: 'scenario_cp_sat_ui_test',
+      status: 'optimal',
+      strategy: 'cp_sat',
+      operations: [{
+        id: 'scheduled_order_1_cp_sat',
+        orderId: 'order_1',
+        nodeId: 'node_dosing_line',
+        materialId: 'mat_feed',
+        start: 0,
+        end: 45,
+        quantity: 80,
+      }],
+      kpis: { lateOrders: 0, totalTardiness: 0, makespan: 45 },
+      violations: [],
+      explanations: ['Solved by local CP-SAT test API.'],
+    };
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'plant_pfg_feed_production' }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        status: 'optimal',
+        issues: [],
+        scenario: { id: 'scenario_cp_sat_ui_test', plantId: 'plant_pfg_feed_production' },
+        schedule: cpSatSchedule,
+      }), { status: 201 }));
+
+    render(<App />);
+
+    await user.selectOptions(screen.getByLabelText('Estrategia de planificación'), 'cp_sat');
+    await user.clear(screen.getByLabelText('Límite CP-SAT (s)'));
+    await user.type(screen.getByLabelText('Límite CP-SAT (s)'), '9');
+    await user.clear(screen.getByLabelText('Workers CP-SAT'));
+    await user.type(screen.getByLabelText('Workers CP-SAT'), '2');
+    await user.click(screen.getByRole('button', { name: 'Planificar pedidos' }));
+
+    await waitFor(() => expect(screen.getByLabelText('Solve feedback')).toHaveTextContent('optimal'));
+    expect(screen.getByText('CP-SAT local')).toBeInTheDocument();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]![0]).toBe('http://127.0.0.1:8787/api/plants');
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toMatchObject({
+      id: 'plant_pfg_feed_production',
+      orders: expect.arrayContaining([expect.objectContaining({ id: 'order_1', quantity: 80 })]),
+    });
+    expect(fetchMock.mock.calls[1]![0]).toBe('http://127.0.0.1:8787/api/solve/cp-sat');
+    expect(JSON.parse(String(fetchMock.mock.calls[1]![1]?.body))).toEqual({
+      plantId: 'plant_pfg_feed_production',
+      timeLimitSeconds: 9,
+      workers: 2,
+    });
   });
 });

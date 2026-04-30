@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-04-30)
 
 ## Corpus Check
-- 30 files · ~37,834 words
+- 30 files · ~38,565 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 845 nodes · 1838 edges · 38 communities detected
+- 858 nodes · 1853 edges · 30 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -40,135 +40,127 @@
 - [[_COMMUNITY_Community 27|Community 27]]
 - [[_COMMUNITY_Community 28|Community 28]]
 - [[_COMMUNITY_Community 29|Community 29]]
-- [[_COMMUNITY_Community 30|Community 30]]
-- [[_COMMUNITY_Community 31|Community 31]]
-- [[_COMMUNITY_Community 32|Community 32]]
-- [[_COMMUNITY_Community 33|Community 33]]
-- [[_COMMUNITY_Community 34|Community 34]]
-- [[_COMMUNITY_Community 35|Community 35]]
-- [[_COMMUNITY_Community 36|Community 36]]
-- [[_COMMUNITY_Community 37|Community 37]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `La()` - 51 edges
-2. `G_()` - 35 edges
-3. `vE()` - 32 edges
-4. `QE()` - 32 edges
-5. `mE()` - 28 edges
-6. `st()` - 24 edges
-7. `Dn()` - 23 edges
-8. `xt()` - 21 edges
-9. `zl` - 21 edges
+1. `ha` - 49 edges
+2. `qE()` - 33 edges
+3. `Q_()` - 31 edges
+4. `vE()` - 30 edges
+5. `mE()` - 27 edges
+6. `Xt()` - 25 edges
+7. `it()` - 25 edges
+8. `pS()` - 21 edges
+9. `Rl` - 21 edges
 10. `ForgePlanLocalStore` - 20 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `X_()` --calls--> `l()`  [EXTRACTED]
-  dist-web/assets/index-k01SKVPB.js → dist-web/assets/index-k01SKVPB.js  _Bridges community 11 → community 12_
-- `t2()` --calls--> `l()`  [EXTRACTED]
-  dist-web/assets/index-k01SKVPB.js → dist-web/assets/index-k01SKVPB.js  _Bridges community 11 → community 14_
-- `aw()` --calls--> `l()`  [EXTRACTED]
-  dist-web/assets/index-k01SKVPB.js → dist-web/assets/index-k01SKVPB.js  _Bridges community 11 → community 15_
-- `rv()` --calls--> `l()`  [EXTRACTED]
-  dist-web/assets/index-k01SKVPB.js → dist-web/assets/index-k01SKVPB.js  _Bridges community 11 → community 16_
-- `Z_()` --calls--> `r()`  [EXTRACTED]
-  dist-web/assets/index-k01SKVPB.js → dist-web/assets/index-k01SKVPB.js  _Bridges community 11 → community 13_
+- `sb()` --calls--> `l()`  [EXTRACTED]
+  dist-web/assets/index-j_myrlJ0.js → dist-web/assets/index-j_myrlJ0.js  _Bridges community 4 → community 0_
+- `Y_()` --calls--> `jw()`  [EXTRACTED]
+  dist-web/assets/index-j_myrlJ0.js → dist-web/assets/index-j_myrlJ0.js  _Bridges community 4 → community 3_
+- `aE()` --calls--> `tr()`  [EXTRACTED]
+  dist-web/assets/index-j_myrlJ0.js → dist-web/assets/index-j_myrlJ0.js  _Bridges community 4 → community 5_
+- `X_()` --calls--> `dE()`  [EXTRACTED]
+  dist-web/assets/index-j_myrlJ0.js → dist-web/assets/index-j_myrlJ0.js  _Bridges community 4 → community 6_
+- `Q_()` --calls--> `bT()`  [EXTRACTED]
+  dist-web/assets/index-j_myrlJ0.js → dist-web/assets/index-j_myrlJ0.js  _Bridges community 0 → community 3_
 
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.03
-Nodes (29): av(), bM(), cu(), eC, iE(), iy(), J_(), jN() (+21 more)
+Cohesion: 0.02
+Nodes (124): $_(), $0(), a3(), aN(), B0(), bE(), bl(), Bo() (+116 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.05
-Nodes (27): _2(), Af, aM(), c0, Dl, Dn(), F0(), H0() (+19 more)
+Cohesion: 0.04
+Nodes (9): Bw(), CM(), ha, of(), ou, pS(), Rl, vl() (+1 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.03
-Nodes (22): aE(), cE(), fb(), fS(), hb(), j2(), jE(), k0() (+14 more)
+Cohesion: 0.05
+Nodes (23): Af, aM(), c0, cu, Dl(), fa(), fu, Hl (+15 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.04
-Nodes (21): _0(), ah(), CC(), Df, EM(), Ex(), gl(), I0() (+13 more)
+Cohesion: 0.05
+Nodes (59): ab(), at(), b2(), bN(), bT(), by(), dT(), e0() (+51 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.05
-Nodes (61): aC(), ay(), Bf(), Cf, clamp(), dx(), eb(), Ev() (+53 more)
+Cohesion: 0.04
+Nodes (43): a(), a2(), aw(), Bf(), C2(), D0(), e2(), ev() (+35 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.05
-Nodes (60): ar(), b2(), bT(), bw(), c2(), copy(), d2(), dS() (+52 more)
+Cohesion: 0.06
+Nodes (58): aE(), Ai(), Al(), av(), _C(), Cl(), dN(), dw() (+50 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.06
-Nodes (28): addCustomPlantNode(), addMixer(), addPlantConnection(), addProductToPlant(), canonicalConnectionHandle(), connectionHandle(), createCustomNode(), createProduct() (+20 more)
+Cohesion: 0.05
+Nodes (25): ah(), bv(), dE(), du, Dv(), Dy(), F0(), hE() (+17 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.08
-Nodes (22): buildPfgFlowModel(), buildSolverModel(), defaultProductionMode(), estimateDuration(), findRouteForOrder(), maxMetadata(), nodeSupportsMaterial(), numberMetadata() (+14 more)
+Cohesion: 0.05
+Nodes (32): addCustomPlantNode(), addMixer(), addPlantConnection(), addProductToPlant(), boundedPositiveIntegerInput(), canonicalConnectionHandle(), connectionHandle(), createCustomNode() (+24 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.1
-Nodes (39): aN(), aT(), cN(), cT(), e0(), eN(), fx(), gn() (+31 more)
+Cohesion: 0.08
+Nodes (22): buildPfgFlowModel(), buildSolverModel(), defaultProductionMode(), estimateDuration(), findRouteForOrder(), maxMetadata(), nodeSupportsMaterial(), numberMetadata() (+14 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.13
 Nodes (30): createDefaultSolveAdapter(), describeBackendModels(), emptyResponse(), ensureScenarioMatchesSolveRequest(), errorResponse(), handleApiRequest(), handlePlants(), handleScenarios() (+22 more)
 
 ### Community 10 - "Community 10"
+Cohesion: 0.08
+Nodes (29): _2(), AC(), ay(), Cf, clamp(), copy(), Dx(), e3() (+21 more)
+
+### Community 11 - "Community 11"
 Cohesion: 0.14
 Nodes (3): ForgePlanLocalStore, StoreRelationshipError, StoreValidationError
 
-### Community 11 - "Community 11"
-Cohesion: 0.1
-Nodes (20): $_(), _b(), bb(), cw(), dw(), fv(), gb(), jw() (+12 more)
-
 ### Community 12 - "Community 12"
-Cohesion: 0.12
-Nodes (17): aS(), B0(), bN(), DC(), dT(), G_(), nS(), of() (+9 more)
+Cohesion: 0.25
+Nodes (1): pa
 
 ### Community 13 - "Community 13"
-Cohesion: 0.13
-Nodes (18): bv(), by(), dE(), dv(), hE(), iS(), jv(), kv() (+10 more)
-
-### Community 14 - "Community 14"
-Cohesion: 0.14
-Nodes (14): bS(), Cv(), displayable(), eS(), ey(), Jd(), mf(), rgb() (+6 more)
-
-### Community 15 - "Community 15"
-Cohesion: 0.2
-Nodes (13): a(), a2(), aw(), e2(), iv(), iw(), J0(), lw() (+5 more)
-
-### Community 16 - "Community 16"
-Cohesion: 0.19
-Nodes (11): du(), _E(), fE(), Ft(), G0(), jo(), oN(), Ro() (+3 more)
-
-### Community 17 - "Community 17"
-Cohesion: 0.18
-Nodes (11): gv(), kT(), nr(), ow(), py(), rw(), Su(), vn() (+3 more)
-
-### Community 18 - "Community 18"
-Cohesion: 0.25
-Nodes (1): ra
-
-### Community 19 - "Community 19"
-Cohesion: 0.32
-Nodes (8): Ax(), bC(), _C(), cx(), jx(), kC(), th(), yn()
-
-### Community 20 - "Community 20"
 Cohesion: 0.52
 Nodes (6): error(), hasRouteForMaterial(), toResult(), validateDomain(), validatePlant(), warning()
 
-### Community 21 - "Community 21"
-Cohesion: 0.33
-Nodes (4): D0(), ib(), lb(), nb()
-
-### Community 22 - "Community 22"
+### Community 14 - "Community 14"
 Cohesion: 0.4
 Nodes (1): ResizeObserverMock
 
-### Community 23 - "Community 23"
+### Community 15 - "Community 15"
 Cohesion: 0.5
+Nodes (0):
+
+### Community 16 - "Community 16"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 17 - "Community 17"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 18 - "Community 18"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 19 - "Community 19"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 20 - "Community 20"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 21 - "Community 21"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 22 - "Community 22"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 23 - "Community 23"
+Cohesion: 1.0
 Nodes (0):
 
 ### Community 24 - "Community 24"
@@ -195,84 +187,52 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0):
 
-### Community 30 - "Community 30"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 31 - "Community 31"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 32 - "Community 32"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 33 - "Community 33"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 34 - "Community 34"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 35 - "Community 35"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 36 - "Community 36"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 37 - "Community 37"
-Cohesion: 1.0
-Nodes (0):
-
 ## Knowledge Gaps
 - **4 isolated node(s):** `InvalidJsonError`, `InvalidSolveOptionsError`, `NotFoundError`, `PayloadTooLargeError`
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 24`** (2 nodes): `readFixture()`, `ortoolsCpSatAdapter.test.ts`
+- **Thin community `Community 16`** (2 nodes): `readFixture()`, `ortoolsCpSatAdapter.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 25`** (2 nodes): `readPlantFixture()`, `backendApi.test.ts`
+- **Thin community `Community 17`** (2 nodes): `readPlantFixture()`, `backendApi.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 26`** (2 nodes): `readFixture()`, `localSolveRunner.test.ts`
+- **Thin community `Community 18`** (2 nodes): `readFixture()`, `localSolveRunner.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 27`** (2 nodes): `readFixture()`, `solver.test.ts`
+- **Thin community `Community 19`** (2 nodes): `readFixture()`, `solver.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 28`** (2 nodes): `readPlantFixture()`, `localStore.test.ts`
+- **Thin community `Community 20`** (2 nodes): `readPlantFixture()`, `localStore.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 29`** (2 nodes): `validatePlant.test.ts`, `readFixture()`
+- **Thin community `Community 21`** (2 nodes): `validatePlant.test.ts`, `readFixture()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 30`** (1 nodes): `vite.config.ts`
+- **Thin community `Community 22`** (1 nodes): `vite.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 31`** (1 nodes): `forgeplanSolveCli.test.ts`
+- **Thin community `Community 23`** (1 nodes): `forgeplanSolveCli.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 32`** (1 nodes): `app.test.tsx`
+- **Thin community `Community 24`** (1 nodes): `app.test.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 33`** (1 nodes): `index.ts`
+- **Thin community `Community 25`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 34`** (1 nodes): `index.ts`
+- **Thin community `Community 26`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 35`** (1 nodes): `node.ts`
+- **Thin community `Community 27`** (1 nodes): `node.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 36`** (1 nodes): `plantSchema.ts`
+- **Thin community `Community 28`** (1 nodes): `plantSchema.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 37`** (1 nodes): `main.tsx`
+- **Thin community `Community 29`** (1 nodes): `main.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `La()` connect `Community 0` to `Community 2`, `Community 11`, `Community 4`?**
-  _High betweenness centrality (0.072) - this node is a cross-community bridge._
-- **Why does `QE()` connect `Community 3` to `Community 0`, `Community 1`, `Community 2`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
-- **Why does `zl` connect `Community 0` to `Community 1`, `Community 2`?**
+- **Why does `ha` connect `Community 1` to `Community 0`, `Community 2`, `Community 10`, `Community 4`?**
+  _High betweenness centrality (0.071) - this node is a cross-community bridge._
+- **Why does `qE()` connect `Community 6` to `Community 0`, `Community 1`, `Community 2`, `Community 4`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `Rl` connect `Community 1` to `Community 0`, `Community 2`, `Community 5`?**
   _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **What connects `InvalidJsonError`, `InvalidSolveOptionsError`, `NotFoundError` to the rest of the system?**
   _4 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._

@@ -175,6 +175,9 @@ type ProductInput = {
 };
 
 type ActiveScreen = 'plant' | 'products';
+type PlannerSolveStrategy = 'mock' | 'cp_sat';
+
+const localSolverApiBaseUrl = 'http://127.0.0.1:8787';
 
 function metadataString(metadata: Record<string, unknown> | undefined, key: string): string | undefined {
   const value = metadata?.[key];
@@ -220,6 +223,46 @@ function supportsProductionMode(type: PlantNode['type']): boolean {
 
 function defaultProductionModeForType(type: PlantNode['type']): ProductionMode {
   return type === 'line' ? 'continuous' : 'batch';
+}
+
+type LocalSolveApiResponse = {
+  schedule?: Schedule;
+  error?: { message?: string };
+};
+
+async function solvePlantWithLocalCpSatApi(plant: Plant, options: { timeLimitSeconds: number; workers: number }): Promise<Schedule> {
+  const headers = { 'content-type': 'application/json' };
+  const saveResponse = await fetch(`${localSolverApiBaseUrl}/api/plants`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(plant),
+  });
+  if (!saveResponse.ok) throw new Error(await localApiErrorMessage(saveResponse, 'No se pudo guardar la planta en la API local.'));
+
+  const solveResponse = await fetch(`${localSolverApiBaseUrl}/api/solve/cp-sat`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ plantId: plant.id, timeLimitSeconds: options.timeLimitSeconds, workers: options.workers }),
+  });
+  const body = await solveResponse.json() as LocalSolveApiResponse;
+  if (!solveResponse.ok) throw new Error(body.error?.message ?? 'El solver CP-SAT local devolvió un error.');
+  if (!body.schedule) throw new Error('La API local no devolvió un schedule CP-SAT.');
+  return body.schedule;
+}
+
+async function localApiErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = await response.json() as LocalSolveApiResponse;
+    return body.error?.message ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function boundedPositiveIntegerInput(value: string, fallback: number, max: number): number {
+  const parsed = Math.trunc(Number(value));
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(parsed, max);
 }
 
 function productionModeForNode(node: PlantNode): ProductionMode | undefined {
@@ -711,6 +754,12 @@ export default function App() {
   const [storageHydrated, setStorageHydrated] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
+  const [plannerSolveStrategy, setPlannerSolveStrategy] = useState<PlannerSolveStrategy>('mock');
+  const [cpSatTimeLimitSeconds, setCpSatTimeLimitSeconds] = useState('10');
+  const [cpSatWorkers, setCpSatWorkers] = useState('2');
+  const [solveStatusText, setSolveStatusText] = useState('Listo para planificar en modo demo.');
+  const [solveError, setSolveError] = useState<string | null>(null);
+  const [isSolving, setIsSolving] = useState(false);
   const pendingPositionChangesRef = useRef<PositionChangeLike[]>([]);
   const dragFrameRef = useRef<number | null>(null);
   const validation = useMemo(() => validatePlant(plant), [plant]);
@@ -824,10 +873,32 @@ export default function App() {
     }
   };
 
-  const runMockSolve = () => {
-    const solverModel = buildSolverModel(plant, scenario);
-    const result = mockSolverAdapter.solve(solverModel);
-    setSchedule(result.schedule);
+  const runPlannerSolve = async () => {
+    setSolveError(null);
+    setIsSolving(true);
+    try {
+      if (plannerSolveStrategy === 'mock') {
+        const solverModel = buildSolverModel(plant, scenario);
+        const result = mockSolverAdapter.solve(solverModel);
+        setSchedule(result.schedule);
+        setSolveStatusText('Plan demo generado localmente.');
+        return;
+      }
+
+      setSolveStatusText('Enviando planta al solver CP-SAT local…');
+      const cpSatSchedule = await solvePlantWithLocalCpSatApi(plant, {
+        timeLimitSeconds: boundedPositiveIntegerInput(cpSatTimeLimitSeconds, 10, 300),
+        workers: boundedPositiveIntegerInput(cpSatWorkers, 2, 16),
+      });
+      setSchedule(cpSatSchedule);
+      setSolveStatusText('Plan CP-SAT local recibido.');
+    } catch (error) {
+      setSchedule(null);
+      setSolveError((error as Error).message);
+      setSolveStatusText('No se pudo completar la planificación.');
+    } finally {
+      setIsSolving(false);
+    }
   };
 
   const handleNodeClick = useCallback<NodeMouseHandler>((_, node) => {
@@ -958,8 +1029,51 @@ export default function App() {
           <button className="secondary-action" type="button" onClick={() => setExportingJson(true)}>
             Export JSON
           </button>
-          <button className="planner-action" type="button" onClick={runMockSolve} disabled={validation.status === 'not_ready'}>
-            Planificar pedidos
+          <div className="solver-settings" aria-label="Opciones del solver">
+            <label>
+              Estrategia de planificación
+              <select
+                aria-label="Estrategia de planificación"
+                value={plannerSolveStrategy}
+                onChange={(event) => {
+                  setPlannerSolveStrategy(event.target.value as PlannerSolveStrategy);
+                  setSchedule(null);
+                  setSolveError(null);
+                }}
+              >
+                <option value="mock">Demo mock</option>
+                <option value="cp_sat">CP-SAT local</option>
+              </select>
+            </label>
+            {plannerSolveStrategy === 'cp_sat' && (
+              <div className="cp-sat-options">
+                <label>
+                  Límite CP-SAT (s)
+                  <input
+                    aria-label="Límite CP-SAT (s)"
+                    min="1"
+                    max="300"
+                    type="number"
+                    value={cpSatTimeLimitSeconds}
+                    onChange={(event) => setCpSatTimeLimitSeconds(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Workers CP-SAT
+                  <input
+                    aria-label="Workers CP-SAT"
+                    min="1"
+                    max="16"
+                    type="number"
+                    value={cpSatWorkers}
+                    onChange={(event) => setCpSatWorkers(event.target.value)}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+          <button className="planner-action" type="button" onClick={() => void runPlannerSolve()} disabled={validation.status === 'not_ready' || isSolving}>
+            {isSolving ? 'Planificando…' : 'Planificar pedidos'}
           </button>
           <p className="solver-demo-badge">Solver demo</p>
           <PlannerOrdersPanel plant={plant} onUpdateOrder={updateOrder} />
@@ -1051,7 +1165,7 @@ export default function App() {
 
           <ConnectionPanel connections={plant.connections} onEdit={openConnectionProperties} />
 
-          <SolvePanel schedule={schedule} plant={plant} />
+          <SolvePanel schedule={schedule} plant={plant} solveStatusText={solveStatusText} solveError={solveError} />
         </aside>
       </main>
       ) : (
@@ -2152,13 +2266,20 @@ function ScheduleExplanation({ schedule, plant }: { schedule: Schedule; plant: P
   );
 }
 
-function SolvePanel({ schedule, plant }: { schedule: Schedule | null; plant: Plant }) {
+function scheduleStrategyLabel(schedule: Schedule | null): string {
+  if (schedule?.strategy === 'cp_sat') return 'Resultado CP-SAT local';
+  return 'Solver demo';
+}
+
+function SolvePanel({ schedule, plant, solveStatusText, solveError }: { schedule: Schedule | null; plant: Plant; solveStatusText: string; solveError: string | null }) {
   return (
     <div className="solve-panel" aria-label="Solve feedback">
       <div className="solve-panel-title">
         <h3>Resultado de planificación</h3>
-        <span>Solver demo</span>
+        <span>{scheduleStrategyLabel(schedule)}</span>
       </div>
+      <p className="solve-status-copy">{solveStatusText}</p>
+      {solveError && <p className="solve-error" role="alert">{solveError}</p>}
       {!schedule ? (
         <p className="muted-dark">Pulsa “Planificar pedidos” para ver un plan demo, KPIs y una explicación para el planner.</p>
       ) : (
