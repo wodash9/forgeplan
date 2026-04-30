@@ -2,7 +2,7 @@
 
 ForgePlan is a local-first platform for modeling production plants, validating feasibility, and eventually optimizing production schedules.
 
-This repository currently contains the local-first ForgePlan foundation through **Phase 7: PFG CP-SAT production solver V2**.
+This repository currently contains the local-first ForgePlan foundation through **Phase 7: PFG CP-SAT production solver V2**, plus a planner-facing demo loop for showing orders, planning feedback, and bottleneck explanations.
 
 ## Current scope
 
@@ -18,6 +18,8 @@ Included:
 - solver IR for scheduling model translation
 - deterministic mock solver adapter
 - UI solve feedback with mock schedule KPIs
+- visible planner orders panel with editable demo demand
+- planner-facing solve action and post-solve explanation of tardiness, bottleneck and next action
 - simple Gantt/timeline schedule visualization
 - local OR-Tools CP-SAT adapter for Node/Python environments
 - PFG/OptiPlan CP-SAT production layer with batching, dosing levels, silos, inventory reservoirs, granulator assignment, final storage and dispatch constraints
@@ -123,8 +125,10 @@ npm run dev
 
 The current editor uses React Flow / XYFlow for the node canvas, edges, selection, pan/zoom controls, and node dragging while keeping the canonical ForgePlan `Plant` model as the source of truth.
 
-Use **Run mock solve** to build a local solver model, run the deterministic mock solver, and preview status, KPIs, violations, scheduled operations, and a simple Gantt-style timeline. This is UI plumbing only; it is not real optimization yet.
+The planner demo loop starts on **Planificación local de producción**. A planner can review and edit demo orders in **Pedidos a planificar**, click **Planificar pedidos**, and then inspect KPIs, a Gantt-style timeline, and **Qué ha pasado** with late orders, likely bottleneck, and next action. The UI is labelled **Solver demo** while it uses the deterministic mock solver.
+
+Use **Planificar pedidos** to build a local solver model, run the deterministic mock solver, and preview status, KPIs, violations, scheduled operations, and a simple Gantt-style timeline. This is UI plumbing only; it is not real optimization yet.
 
 ## Next phase candidate
 
-ForgePlan next solver layers — connect CP-SAT strategy selection to the web UI, then harden the production solver with decomposed baseline, warm-start hints, true multi-pass lexicographic solving, calendars/maintenance windows and larger benchmark instances.
+ForgePlan next solver layer — connect CP-SAT strategy selection to the web UI, then harden the production solver with decomposed baseline, warm-start hints, true multi-pass lexicographic solving, calendars/maintenance windows and larger benchmark instances.

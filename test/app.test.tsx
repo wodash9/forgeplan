@@ -65,7 +65,8 @@ describe('ForgePlan visual plant editor', () => {
   it('renders each node as the ISO-style equipment symbol itself instead of a square card with an icon inside', () => {
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Visual Plant Editor MVP' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Planificación local de producción' })).toBeInTheDocument();
+    expect(screen.getByText(/planta.*pedidos.*cuellos de botella/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'PFG Feed Production Plant' })).toBeInTheDocument();
     expect(screen.getByText('ready')).toBeInTheDocument();
     expect(screen.getByTestId('forgeplan-flow-canvas')).toBeInTheDocument();
@@ -603,16 +604,36 @@ describe('ForgePlan visual plant editor', () => {
     expect(await screen.findByText(/Saved to local DB/)).toBeInTheDocument();
   });
 
-  it('runs a mock solve and shows schedule feedback', async () => {
+  it('renders planner-facing orders and lets the planner edit demo demand', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'Run mock solve' }));
+    const ordersPanel = screen.getByRole('region', { name: 'Pedidos a planificar' });
+    expect(ordersPanel).toHaveTextContent('order_1');
+    expect(ordersPanel).toHaveTextContent('Feed product flow');
+    expect(ordersPanel).toHaveTextContent('80 kg');
+    expect(ordersPanel).toHaveTextContent('Entrega: 420 minute');
+    expect(ordersPanel).toHaveTextContent('Prioridad: 1');
+
+    await user.clear(screen.getByLabelText('Cantidad de order_1'));
+    await user.type(screen.getByLabelText('Cantidad de order_1'), '95');
+
+    expect(ordersPanel).toHaveTextContent('95 kg');
+  });
+
+  it('runs the planner demo solve and explains the result in planner language', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    expect(screen.getAllByText('Solver demo').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: 'Planificar pedidos' }));
 
     expect(screen.getByLabelText('Solve feedback')).toHaveTextContent('feasible');
     expect(screen.getByText('makespan')).toBeInTheDocument();
     expect(screen.getByText('late orders')).toBeInTheDocument();
     expect(screen.getByText('tardiness')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Qué ha pasado' })).toHaveTextContent('Cuello de botella probable');
+    expect(screen.getByRole('region', { name: 'Qué ha pasado' })).toHaveTextContent('Siguiente acción');
     expect(screen.getByLabelText('Visual Gantt schedule')).toBeInTheDocument();
     expect(screen.getByText('Visual Gantt schedule')).toBeInTheDocument();
     expect(screen.getByText('Resource lanes')).toBeInTheDocument();

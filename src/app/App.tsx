@@ -18,7 +18,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { Connection as PlantConnection, Plant, PlantNode, Product, ProductComponent, ProductionMode, Schedule } from '../domain/types.js';
+import type { Connection as PlantConnection, Order, Plant, PlantNode, Product, ProductComponent, ProductionMode, Schedule } from '../domain/types.js';
 import { createScenario } from '../domain/defaults.js';
 import { plantSchema } from '../schema/plantSchema.js';
 import { buildSolverModel, mockSolverAdapter } from '../solver/index.js';
@@ -769,6 +769,14 @@ export default function App() {
     setSchedule(null);
   };
 
+  const updateOrder = (orderId: string, patch: Partial<Order>) => {
+    setPlant((current) => ({
+      ...current,
+      orders: current.orders.map((order) => (order.id === orderId ? { ...order, ...patch } : order)),
+    }));
+    setSchedule(null);
+  };
+
   const openConnectionProperties = useCallback((connectionId: string) => {
     setPropertiesConnectionId(connectionId);
   }, []);
@@ -920,8 +928,8 @@ export default function App() {
       <header className="hero">
         <div>
           <p className="eyebrow">ForgePlan</p>
-          <h1>Visual Plant Editor MVP</h1>
-          <p className="muted">Modela la planta, revisa readiness y prepara la base para optimización local.</p>
+          <h1>Planificación local de producción</h1>
+          <p className="muted">Modela la planta, ajusta pedidos y detecta cuellos de botella en una demo local/offline sin sacar datos de fábrica.</p>
         </div>
         <ReadinessBadge status={validation.status} />
       </header>
@@ -950,9 +958,11 @@ export default function App() {
           <button className="secondary-action" type="button" onClick={() => setExportingJson(true)}>
             Export JSON
           </button>
-          <button className="secondary-action" type="button" onClick={runMockSolve} disabled={validation.status === 'not_ready'}>
-            Run mock solve
+          <button className="planner-action" type="button" onClick={runMockSolve} disabled={validation.status === 'not_ready'}>
+            Planificar pedidos
           </button>
+          <p className="solver-demo-badge">Solver demo</p>
+          <PlannerOrdersPanel plant={plant} onUpdateOrder={updateOrder} />
           <div className="summary-card">
             <strong>{plant.nodes.length}</strong>
             <span>nodes</span>
@@ -973,7 +983,7 @@ export default function App() {
               <p className="eyebrow">Plant model</p>
               <h2>{plant.name}</h2>
             </div>
-            <span>ISA-5.1-style instrumentation tags · ISO 10628-style equipment · {plant.orders.length} order ready</span>
+            <span>ISA-5.1-style instrumentation tags · ISO 10628-style equipment · {plant.orders.length} pedidos listos</span>
           </div>
           <div className="flow-surface" data-testid="forgeplan-flow-canvas">
             <ReactFlow
@@ -1961,6 +1971,64 @@ function ConnectionPropertiesDialog({
   );
 }
 
+function PlannerOrdersPanel({ plant, onUpdateOrder }: { plant: Plant; onUpdateOrder: (orderId: string, patch: Partial<Order>) => void }) {
+  const materialName = (materialId: string) => plant.materials.find((material) => material.id === materialId)?.name ?? materialId;
+
+  return (
+    <section className="orders-panel" aria-label="Pedidos a planificar">
+      <div className="orders-panel-header">
+        <p className="eyebrow">Demanda</p>
+        <h3>Pedidos a planificar</h3>
+      </div>
+      <div className="orders-list">
+        {plant.orders.map((order) => (
+          <article className="order-card" key={order.id}>
+            <div className="order-card-header">
+              <strong>{order.id}</strong>
+              <span>{materialName(order.materialId)}</span>
+            </div>
+            <p className="order-summary">
+              {order.quantity} kg · Entrega: {order.dueTime} {plant.timeUnit} · Inicio mín.: {order.earliestStart ?? 0} {plant.timeUnit} · Prioridad: {order.priority}
+            </p>
+            <div className="order-edit-grid">
+              <label>
+                Cantidad de {order.id}
+                <input
+                  aria-label={`Cantidad de ${order.id}`}
+                  min="1"
+                  type="number"
+                  value={order.quantity}
+                  onChange={(event) => onUpdateOrder(order.id, { quantity: Math.max(1, Number(event.target.value) || 1) })}
+                />
+              </label>
+              <label>
+                Entrega de {order.id}
+                <input
+                  aria-label={`Entrega de ${order.id}`}
+                  min="1"
+                  type="number"
+                  value={order.dueTime}
+                  onChange={(event) => onUpdateOrder(order.id, { dueTime: Math.max(1, Number(event.target.value) || 1) })}
+                />
+              </label>
+              <label>
+                Prioridad de {order.id}
+                <input
+                  aria-label={`Prioridad de ${order.id}`}
+                  min="1"
+                  type="number"
+                  value={order.priority}
+                  onChange={(event) => onUpdateOrder(order.id, { priority: Math.max(1, Number(event.target.value) || 1) })}
+                />
+              </label>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ReadinessBadge({ status }: { status: ReturnType<typeof validatePlant>['status'] }) {
   return <div className={`readiness-badge ${status}`}>{status.replaceAll('_', ' ')}</div>;
 }
@@ -2049,12 +2117,50 @@ function buildTimelineTicks(scaleEnd: number): number[] {
   return [0, step, step * 2, step * 3, scaleEnd].filter((tick, index, values) => values.indexOf(tick) === index);
 }
 
+function buildScheduleExplanation(schedule: Schedule, plant: Plant) {
+  const busyByNode = new Map<string, number>();
+  for (const operation of schedule.operations) {
+    busyByNode.set(operation.nodeId, (busyByNode.get(operation.nodeId) ?? 0) + Math.max(0, operation.end - operation.start));
+  }
+  const bottleneck = [...busyByNode.entries()].sort((a, b) => b[1] - a[1])[0];
+  const bottleneckNode = bottleneck ? plant.nodes.find((node) => node.id === bottleneck[0]) : undefined;
+  const bottleneckText = bottleneck
+    ? `${bottleneckNode?.name ?? bottleneck[0]} (${bottleneck[1]} ${plant.timeUnit} ocupados)`
+    : 'sin operaciones planificadas todavía';
+  const nextAction = schedule.kpis.lateOrders > 0
+    ? 'Revisar la fecha de entrega más ajustada, aumentar capacidad del recurso cargado o dividir demanda.'
+    : 'Validar este plan con más pedidos y probar después el solver CP-SAT real desde la API local.';
+
+  return { bottleneckText, nextAction };
+}
+
+function ScheduleExplanation({ schedule, plant }: { schedule: Schedule; plant: Plant }) {
+  const explanation = buildScheduleExplanation(schedule, plant);
+
+  return (
+    <section className="schedule-explanation" aria-label="Qué ha pasado">
+      <p className="eyebrow">Lectura planner</p>
+      <h4>Qué ha pasado</h4>
+      <ul>
+        <li><strong>Pedidos tarde:</strong> {schedule.kpis.lateOrders}</li>
+        <li><strong>Tardanza total:</strong> {schedule.kpis.totalTardiness} {plant.timeUnit}</li>
+        <li><strong>Makespan:</strong> {schedule.kpis.makespan} {plant.timeUnit}</li>
+        <li><strong>Cuello de botella probable:</strong> {explanation.bottleneckText}</li>
+        <li><strong>Siguiente acción:</strong> {explanation.nextAction}</li>
+      </ul>
+    </section>
+  );
+}
+
 function SolvePanel({ schedule, plant }: { schedule: Schedule | null; plant: Plant }) {
   return (
     <div className="solve-panel" aria-label="Solve feedback">
-      <h3>Mock solve</h3>
+      <div className="solve-panel-title">
+        <h3>Resultado de planificación</h3>
+        <span>Solver demo</span>
+      </div>
       {!schedule ? (
-        <p className="muted-dark">Run the mock solver to preview schedule feedback.</p>
+        <p className="muted-dark">Pulsa “Planificar pedidos” para ver un plan demo, KPIs y una explicación para el planner.</p>
       ) : (
         <>
           <div className={`solve-status ${schedule.status}`}>{schedule.status}</div>
@@ -2072,6 +2178,7 @@ function SolvePanel({ schedule, plant }: { schedule: Schedule | null; plant: Pla
               <span>tardiness</span>
             </div>
           </div>
+          <ScheduleExplanation schedule={schedule} plant={plant} />
           {schedule.violations.length > 0 && (
             <ul className="violation-list">
               {schedule.violations.map((violation) => (
