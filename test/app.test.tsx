@@ -164,6 +164,25 @@ describe('ForgePlan visual plant editor', () => {
       }),
     ]));
 
+    const longNameGraph = buildProductDependencyGraph([
+      {
+        id: 'prod_micro_ingredient_preparation_with_extended_description',
+        name: 'Micro Ingredient Preparation With Extended Description',
+        sku: 'MICRO-INGREDIENT-PREPARATION-EXTENDED',
+        unit: 'kg',
+        family: 'Intermediate family with long label',
+        properties: {},
+        components: [],
+      },
+    ]);
+    expect(longNameGraph.nodes[0]).toMatchObject({
+      name: 'Micro Ingredient Preparation With Extended Description',
+      displayName: 'Micro Ingredient…',
+      titleTextLength: 146,
+      displayMeta: 'MICRO-INGREDIENT…',
+      metaTextLength: 146,
+    });
+
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Product catalog' }));
 

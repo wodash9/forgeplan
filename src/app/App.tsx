@@ -245,7 +245,11 @@ export function addProductToPlant(plant: Plant, input: ProductInput): { plant: P
 type ProductDependencyGraphNode = {
   id: string;
   name: string;
+  displayName: string;
+  titleTextLength?: number | undefined;
   sku: string;
+  displayMeta: string;
+  metaTextLength?: number | undefined;
   family?: string | undefined;
   x: number;
   y: number;
@@ -260,6 +264,8 @@ type ProductDependencyGraphEdge = {
   sourceName: string;
   targetName: string;
   label: string;
+  displayLabel: string;
+  labelTextLength?: number | undefined;
   x1: number;
   y1: number;
   x2: number;
@@ -274,6 +280,12 @@ type ProductDependencyGraph = {
   width: number;
   height: number;
 };
+
+function truncateGraphText(value: string, maxLength: number): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${trimmed.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`;
+}
 
 function productDependencyDepth(product: Product, productsById: Map<string, Product>, visiting = new Set<string>()): number {
   if (visiting.has(product.id) || product.components.length === 0) return 0;
@@ -302,11 +314,18 @@ export function buildProductDependencyGraph(products: Product[]): ProductDepende
   const nodes = products.map((product) => {
     const depth = depthById.get(product.id) ?? 0;
     const row = rowByDepth.get(depth) ?? 0;
+    const displayName = truncateGraphText(product.name, 17);
+    const meta = `${product.sku} · ${product.family ?? 'Base'}`;
+    const displayMeta = truncateGraphText(meta, 17);
     rowByDepth.set(depth, row + 1);
     return {
       id: product.id,
       name: product.name,
+      displayName,
+      titleTextLength: displayName === product.name ? undefined : 146,
       sku: product.sku,
+      displayMeta,
+      metaTextLength: displayMeta === meta ? undefined : 146,
       family: product.family,
       x: 56 + depth * 290,
       y: 52 + row * 128,
@@ -325,13 +344,17 @@ export function buildProductDependencyGraph(products: Product[]): ProductDepende
       const y1 = source.y + 39;
       const x2 = target.x - 8;
       const y2 = target.y + 39;
+      const label = `${component.quantity} ${sourceProduct.unit}`;
+      const displayLabel = truncateGraphText(label, 14);
       return [{
         id: `${component.productId}-to-${product.id}-${componentIndex}`,
         sourceProductId: component.productId,
         targetProductId: product.id,
         sourceName: sourceProduct.name,
         targetName: product.name,
-        label: `${component.quantity} ${sourceProduct.unit}`,
+        label,
+        displayLabel,
+        labelTextLength: displayLabel === label ? undefined : 80,
         x1,
         y1,
         x2,
@@ -1074,15 +1097,42 @@ function ProductDependencyGraphPanel({ graph }: { graph: ProductDependencyGraph 
                     d={`M ${edge.x1} ${edge.y1} C ${edge.x1 + curve} ${edge.y1}, ${edge.x2 - curve} ${edge.y2}, ${edge.x2} ${edge.y2}`}
                     markerEnd="url(#productDependencyArrow)"
                   />
-                  <text className="dependency-edge-label" x={edge.labelX} y={edge.labelY}>{edge.label}</text>
+                  <text
+                    className="dependency-edge-label"
+                    x={edge.labelX}
+                    y={edge.labelY}
+                    textLength={edge.labelTextLength}
+                    lengthAdjust={edge.labelTextLength ? 'spacingAndGlyphs' : undefined}
+                  >
+                    <title>{edge.label}</title>
+                    {edge.displayLabel}
+                  </text>
                 </g>
               );
             })}
             {graph.nodes.map((node) => (
               <g className="dependency-node" key={node.id} transform={`translate(${node.x} ${node.y})`}>
                 <rect width="178" height="78" rx="18" />
-                <text className="dependency-node-title" x="16" y="26">{node.name}</text>
-                <text className="dependency-node-meta" x="16" y="47">{node.sku} · {node.family ?? 'Base'}</text>
+                <text
+                  className="dependency-node-title"
+                  x="16"
+                  y="26"
+                  textLength={node.titleTextLength}
+                  lengthAdjust={node.titleTextLength ? 'spacingAndGlyphs' : undefined}
+                >
+                  <title>{node.name}</title>
+                  {node.displayName}
+                </text>
+                <text
+                  className="dependency-node-meta"
+                  x="16"
+                  y="47"
+                  textLength={node.metaTextLength}
+                  lengthAdjust={node.metaTextLength ? 'spacingAndGlyphs' : undefined}
+                >
+                  <title>{node.sku} · {node.family ?? 'Base'}</title>
+                  {node.displayMeta}
+                </text>
                 <text className="dependency-node-foot" x="16" y="66">
                   {node.dependencyCount} in · {node.dependentCount} out
                 </text>
