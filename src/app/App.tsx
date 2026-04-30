@@ -242,6 +242,110 @@ export function addProductToPlant(plant: Plant, input: ProductInput): { plant: P
   return { plant: { ...plant, products: [...plant.products, product] }, productId };
 }
 
+type ProductDependencyGraphNode = {
+  id: string;
+  name: string;
+  sku: string;
+  family?: string | undefined;
+  x: number;
+  y: number;
+  dependencyCount: number;
+  dependentCount: number;
+};
+
+type ProductDependencyGraphEdge = {
+  id: string;
+  sourceProductId: string;
+  targetProductId: string;
+  sourceName: string;
+  targetName: string;
+  label: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  labelX: number;
+  labelY: number;
+};
+
+type ProductDependencyGraph = {
+  nodes: ProductDependencyGraphNode[];
+  edges: ProductDependencyGraphEdge[];
+  width: number;
+  height: number;
+};
+
+function productDependencyDepth(product: Product, productsById: Map<string, Product>, visiting = new Set<string>()): number {
+  if (visiting.has(product.id) || product.components.length === 0) return 0;
+  const nextVisiting = new Set(visiting);
+  nextVisiting.add(product.id);
+  return Math.max(
+    0,
+    ...product.components.map((component) => {
+      const dependency = productsById.get(component.productId);
+      return dependency ? productDependencyDepth(dependency, productsById, nextVisiting) + 1 : 0;
+    }),
+  );
+}
+
+export function buildProductDependencyGraph(products: Product[]): ProductDependencyGraph {
+  const productsById = new Map(products.map((product) => [product.id, product]));
+  const dependentCountById = new Map<string, number>();
+  for (const product of products) {
+    for (const component of product.components) {
+      dependentCountById.set(component.productId, (dependentCountById.get(component.productId) ?? 0) + 1);
+    }
+  }
+
+  const depthById = new Map(products.map((product) => [product.id, productDependencyDepth(product, productsById)]));
+  const rowByDepth = new Map<number, number>();
+  const nodes = products.map((product) => {
+    const depth = depthById.get(product.id) ?? 0;
+    const row = rowByDepth.get(depth) ?? 0;
+    rowByDepth.set(depth, row + 1);
+    return {
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      family: product.family,
+      x: 56 + depth * 290,
+      y: 52 + row * 128,
+      dependencyCount: product.components.length,
+      dependentCount: dependentCountById.get(product.id) ?? 0,
+    };
+  });
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
+  const edges = products.flatMap((product) =>
+    product.components.flatMap((component, componentIndex) => {
+      const sourceProduct = productsById.get(component.productId);
+      const source = nodesById.get(component.productId);
+      const target = nodesById.get(product.id);
+      if (!sourceProduct || !source || !target) return [];
+      const x1 = source.x + 178;
+      const y1 = source.y + 39;
+      const x2 = target.x - 8;
+      const y2 = target.y + 39;
+      return [{
+        id: `${component.productId}-to-${product.id}-${componentIndex}`,
+        sourceProductId: component.productId,
+        targetProductId: product.id,
+        sourceName: sourceProduct.name,
+        targetName: product.name,
+        label: `${component.quantity} ${sourceProduct.unit}`,
+        x1,
+        y1,
+        x2,
+        y2,
+        labelX: (x1 + x2) / 2,
+        labelY: (y1 + y2) / 2 - 10,
+      }];
+    }),
+  );
+  const width = Math.max(720, ...nodes.map((node) => node.x + 210));
+  const height = Math.max(260, ...nodes.map((node) => node.y + 104));
+  return { nodes, edges, width, height };
+}
+
 const browserDbName = 'forgeplan-local-db';
 const browserPlantStoreName = 'plants';
 const browserLatestPlantKey = 'forgeplan.latestPlantId';
@@ -934,6 +1038,73 @@ function productById(products: Product[], productId: string): Product | undefine
   return products.find((product) => product.id === productId);
 }
 
+function ProductDependencyGraphPanel({ graph }: { graph: ProductDependencyGraph }) {
+  return (
+    <section className="panel product-graph-panel" aria-label="Product dependency graph">
+      <div className="product-graph-header">
+        <div>
+          <p className="eyebrow">Flow</p>
+          <h3>Product dependency graph</h3>
+          <p className="muted-dark">Las flechas van desde el componente/base hacia el producto que lo consume.</p>
+        </div>
+        <span className="product-graph-count">{graph.edges.length} dependencies</span>
+      </div>
+
+      {graph.nodes.length === 0 ? (
+        <p className="empty-products">No products yet. Create one to start the graph.</p>
+      ) : (
+        <div className="dependency-graph-shell">
+          <svg
+            className="dependency-graph-svg"
+            viewBox={`0 0 ${graph.width} ${graph.height}`}
+            role="img"
+            aria-label="Visual graph of product dependency relationships"
+          >
+            <defs>
+              <marker id="productDependencyArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" />
+              </marker>
+            </defs>
+            {graph.edges.map((edge) => {
+              const curve = Math.max(42, Math.abs(edge.x2 - edge.x1) / 2);
+              return (
+                <g key={edge.id} data-dependency-edge={`${edge.sourceProductId}-to-${edge.targetProductId}`}>
+                  <path
+                    className="dependency-edge"
+                    d={`M ${edge.x1} ${edge.y1} C ${edge.x1 + curve} ${edge.y1}, ${edge.x2 - curve} ${edge.y2}, ${edge.x2} ${edge.y2}`}
+                    markerEnd="url(#productDependencyArrow)"
+                  />
+                  <text className="dependency-edge-label" x={edge.labelX} y={edge.labelY}>{edge.label}</text>
+                </g>
+              );
+            })}
+            {graph.nodes.map((node) => (
+              <g className="dependency-node" key={node.id} transform={`translate(${node.x} ${node.y})`}>
+                <rect width="178" height="78" rx="18" />
+                <text className="dependency-node-title" x="16" y="26">{node.name}</text>
+                <text className="dependency-node-meta" x="16" y="47">{node.sku} · {node.family ?? 'Base'}</text>
+                <text className="dependency-node-foot" x="16" y="66">
+                  {node.dependencyCount} in · {node.dependentCount} out
+                </text>
+              </g>
+            ))}
+          </svg>
+          <ul className="dependency-graph-legend" aria-label="Dependency relationships">
+            {graph.edges.length > 0 ? graph.edges.map((edge) => (
+              <li key={edge.id}>
+                <strong>{edge.sourceName}</strong>
+                <span> → </span>
+                <strong>{edge.targetName}</strong>
+                <span> · {edge.label}</span>
+              </li>
+            )) : <li>No BOM dependencies yet.</li>}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ProductCatalogScreen({ plant, onCreateProduct }: { plant: Plant; onCreateProduct: (input: ProductInput) => void }) {
   const [name, setName] = useState('Premium Feed 18%');
   const [sku, setSku] = useState('PF-18');
@@ -943,6 +1114,7 @@ function ProductCatalogScreen({ plant, onCreateProduct }: { plant: Plant; onCrea
   const [componentProductId, setComponentProductId] = useState(plant.products[0]?.id ?? '');
   const [componentQuantity, setComponentQuantity] = useState('80');
   const [components, setComponents] = useState<ProductComponent[]>([]);
+  const dependencyGraph = useMemo(() => buildProductDependencyGraph(plant.products), [plant.products]);
 
   const addComponent = () => {
     const quantity = Number(componentQuantity);
@@ -978,6 +1150,8 @@ function ProductCatalogScreen({ plant, onCreateProduct }: { plant: Plant; onCrea
           <div><strong>{plant.products.filter((product) => product.components.length > 0).length}</strong><span>with dependencies</span></div>
         </div>
       </section>
+
+      <ProductDependencyGraphPanel graph={dependencyGraph} />
 
       <section className="panel product-list-panel" aria-label="Product list">
         <p className="eyebrow">List</p>

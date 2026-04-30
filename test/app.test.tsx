@@ -7,6 +7,7 @@ import App, {
   addPlantConnection,
   addProductToPlant,
   buildEquipmentFlowNodes,
+  buildProductDependencyGraph,
   importPlantModelFromJson,
   serializePlantModelForExport,
   mergePositionChanges,
@@ -139,6 +140,38 @@ describe('ForgePlan visual plant editor', () => {
 
     expect(screen.getByRole('region', { name: 'Product list' })).toHaveTextContent('Premium Feed 18%');
     expect(screen.getByRole('region', { name: 'Product list' })).toHaveTextContent('protein: 18%');
+  });
+
+  it('builds and renders a product dependency graph so BOM relationships are visible at a glance', async () => {
+    const user = userEvent.setup();
+    const graph = buildProductDependencyGraph(createDemoPlant().products);
+
+    expect(graph.nodes.map((node) => node.id)).toEqual([
+      'prod_feed_premix',
+      'prod_vitamin_pack',
+      'prod_complete_feed',
+    ]);
+    expect(graph.edges).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        sourceProductId: 'prod_feed_premix',
+        targetProductId: 'prod_complete_feed',
+        label: '80 kg',
+      }),
+      expect.objectContaining({
+        sourceProductId: 'prod_vitamin_pack',
+        targetProductId: 'prod_complete_feed',
+        label: '2 kg',
+      }),
+    ]));
+
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Product catalog' }));
+
+    const graphRegion = screen.getByRole('region', { name: 'Product dependency graph' });
+    expect(graphRegion).toHaveTextContent('Product dependency graph');
+    expect(graphRegion).toHaveTextContent('Feed Premix → Complete Feed');
+    expect(graphRegion).toHaveTextContent('Vitamin Pack → Complete Feed');
+    expect(graphRegion.querySelector('[data-dependency-edge="prod_feed_premix-to-prod_complete_feed"]')).toBeInTheDocument();
   });
 
   it('stores custom plant node metadata through a pure add helper', () => {

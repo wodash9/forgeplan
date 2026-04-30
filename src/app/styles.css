@@ -714,7 +714,8 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .product-hero-panel h2,
 .product-list-panel h3,
-.product-form-panel h3 { margin-bottom: 8px; }
+.product-form-panel h3,
+.product-graph-panel h3 { margin-bottom: 8px; }
 .product-kpis {
   display: flex;
   gap: 12px;
@@ -730,7 +731,104 @@ h1, h2, h3, p { margin-top: 0; }
 .product-kpis strong { display: block; font-size: 30px; }
 .product-kpis span { color: #bddac8; font-weight: 700; }
 .product-list-panel,
-.product-form-panel { padding: 22px; }
+.product-form-panel,
+.product-graph-panel { padding: 22px; }
+.product-graph-panel { grid-column: 1 / -1; }
+.product-graph-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.product-graph-count {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #17382f;
+  color: #eef8f0;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dependency-graph-shell {
+  display: grid;
+  grid-template-columns: minmax(560px, 1fr) minmax(250px, 320px);
+  gap: 16px;
+  align-items: stretch;
+}
+.dependency-graph-svg {
+  width: 100%;
+  min-height: 280px;
+  border: 1px solid #dce7df;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 18px 18px, rgb(115 153 135 / 14%) 1px, transparent 1px),
+    linear-gradient(135deg, #f8fbf6, #eff7f1);
+  background-size: 34px 34px, auto;
+}
+.dependency-edge {
+  fill: none;
+  stroke: #d97706;
+  stroke-width: 3;
+  stroke-linecap: round;
+  filter: drop-shadow(0 3px 5px rgb(217 119 6 / 16%));
+}
+.dependency-graph-svg marker path { fill: #d97706; }
+.dependency-edge-label {
+  fill: #6f4d05;
+  font-size: 13px;
+  font-weight: 950;
+  paint-order: stroke;
+  stroke: #fff8e4;
+  stroke-width: 5;
+  stroke-linejoin: round;
+  text-anchor: middle;
+}
+.dependency-node rect {
+  fill: #ffffff;
+  stroke: #c9dbcf;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 12px 18px rgb(21 48 40 / 12%));
+}
+.dependency-node-title {
+  fill: #17382f;
+  font-size: 15px;
+  font-weight: 950;
+}
+.dependency-node-meta {
+  fill: #5f746b;
+  font-size: 12px;
+  font-weight: 800;
+}
+.dependency-node-foot {
+  fill: #1e5c45;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.dependency-graph-legend {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border-radius: 20px;
+  background: #f4f8f2;
+  color: #3d5148;
+  list-style: none;
+}
+.dependency-graph-legend li {
+  padding: 10px 12px;
+  border: 1px solid #dce7df;
+  border-radius: 14px;
+  background: #fff;
+  color: #4c6258;
+  font-size: 13px;
+}
+.dependency-graph-legend strong { color: #17382f; }
 .product-list {
   display: grid;
   gap: 14px;
