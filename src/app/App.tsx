@@ -999,38 +999,69 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">ForgePlan</p>
-          <h1>Planificación local de producción</h1>
-          <p className="muted">Modela la planta, ajusta pedidos y detecta cuellos de botella en una demo local/offline sin sacar datos de fábrica.</p>
+      <header className="hero ops-hero">
+        <div className="ops-hero-copy">
+          <div className="ops-brandline">
+            <span className="ops-brandmark" aria-hidden="true">FP</span>
+            <p className="eyebrow">ForgePlan Control Room</p>
+          </div>
+          <h1>Centro operativo de planificación</h1>
+          <p className="muted">Modelo de planta, demanda y restricciones en una vista tipo sala de control: capacidad, pedidos y cuellos de botella sin sacar datos de fábrica.</p>
+          <div className="ops-hero-meta" aria-label="Contexto de operación">
+            <span>Planta local-first</span>
+            <span>Modelo PFG</span>
+            <span>Modo demo seguro</span>
+          </div>
         </div>
         <ReadinessBadge status={validation.status} />
       </header>
 
+      <section className="ops-status-strip" aria-label="Estado operacional">
+        <div>
+          <span>Pedidos activos</span>
+          <strong>{plant.orders.length}</strong>
+          <small>listos para secuenciar</small>
+        </div>
+        <div>
+          <span>Equipos modelados</span>
+          <strong>{plant.nodes.length}</strong>
+          <small>nodos ISA/ISO</small>
+        </div>
+        <div>
+          <span>Conexiones</span>
+          <strong>{plant.connections.length}</strong>
+          <small>rutas de proceso</small>
+        </div>
+        <div>
+          <span>Persistencia</span>
+          <strong>Local</strong>
+          <small>{persistenceStatus}</small>
+        </div>
+      </section>
+
       <nav className="screen-tabs" aria-label="ForgePlan screens">
-        <button type="button" className={activeScreen === 'plant' ? 'active' : ''} onClick={() => setActiveScreen('plant')}>
-          Plant editor
+        <button type="button" aria-label="Plant editor" className={activeScreen === 'plant' ? 'active' : ''} onClick={() => setActiveScreen('plant')}>
+          Editor de planta
         </button>
-        <button type="button" className={activeScreen === 'products' ? 'active' : ''} onClick={() => setActiveScreen('products')}>
-          Product catalog
+        <button type="button" aria-label="Product catalog" className={activeScreen === 'products' ? 'active' : ''} onClick={() => setActiveScreen('products')}>
+          Catálogo de productos
         </button>
       </nav>
 
       {activeScreen === 'plant' ? (
       <main className="workspace-grid">
         <aside className="panel palette" aria-label="Plant palette">
-          <p className="eyebrow">Palette</p>
-          <h2>Add equipment</h2>
-          <button type="button" onClick={addMixer}>Add mixer</button>
-          <button className="secondary-action" type="button" onClick={() => setCreatingCustomNode(true)}>
-            Create custom node
+          <p className="eyebrow">Planificación</p>
+          <h2>Centro de demanda</h2>
+          <button type="button" aria-label="Add mixer" onClick={addMixer}>Añadir mixer</button>
+          <button className="secondary-action" type="button" aria-label="Create custom node" onClick={() => setCreatingCustomNode(true)}>
+            Nuevo equipo custom
           </button>
-          <button className="secondary-action" type="button" onClick={() => setImportingJson(true)}>
-            Import JSON
+          <button className="secondary-action" type="button" aria-label="Import JSON" onClick={() => setImportingJson(true)}>
+            Importar JSON
           </button>
-          <button className="secondary-action" type="button" onClick={() => setExportingJson(true)}>
-            Export JSON
+          <button className="secondary-action" type="button" aria-label="Export JSON" onClick={() => setExportingJson(true)}>
+            Exportar JSON
           </button>
           <div className="solver-settings" aria-label="Opciones del solver">
             <label>
@@ -1100,7 +1131,7 @@ export default function App() {
         <section className="panel canvas-panel" aria-label="Plant canvas">
           <div className="canvas-toolbar">
             <div>
-              <p className="eyebrow">Plant model</p>
+              <p className="eyebrow">Digital twin</p>
               <h2>{plant.name}</h2>
             </div>
             <span>ISA-5.1-style instrumentation tags · ISO 10628-style equipment · {plant.orders.length} pedidos listos</span>
@@ -1111,6 +1142,7 @@ export default function App() {
               edges={flowEdges}
               nodeTypes={nodeTypes}
               fitView
+              fitViewOptions={{ padding: 0.08 }}
               onNodeClick={handleNodeClick}
               onEdgeClick={handleEdgeClick}
               onConnect={handleConnect}
@@ -1136,7 +1168,7 @@ export default function App() {
         </section>
 
         <aside className="panel inspector" aria-label="Node inspector">
-          <p className="eyebrow">Inspector</p>
+          <p className="eyebrow">Inspector operativo</p>
           {selectedNode ? (
             <div className="selected-equipment-card">
               <span className="selected-equipment-icon" aria-hidden="true">
@@ -1157,9 +1189,9 @@ export default function App() {
           )}
 
           <div className="readiness-panel">
-            <h3>Readiness</h3>
+            <h3>Estado del modelo</h3>
             {validation.issues.length === 0 ? (
-              <p className="ready-copy">Plant is ready for the next phase.</p>
+              <p className="ready-copy">Modelo validado para la siguiente simulación.</p>
             ) : (
               <ul>
                 {validation.issues.map((issue) => (
@@ -1169,7 +1201,7 @@ export default function App() {
             )}
           </div>
 
-          <ConnectionPanel connections={plant.connections} onEdit={openConnectionProperties} />
+          <ConnectionPanel plant={plant} connections={plant.connections} onEdit={openConnectionProperties} />
 
           <SolvePanel schedule={schedule} plant={plant} solveStatusText={solveStatusText} solveError={solveError} />
         </aside>
@@ -1971,25 +2003,31 @@ function NodePropertiesDialog({
   );
 }
 
-function ConnectionPanel({ connections, onEdit }: { connections: PlantConnection[]; onEdit: (connectionId: string) => void }) {
+function ConnectionPanel({ plant, connections, onEdit }: { plant: Plant; connections: PlantConnection[]; onEdit: (connectionId: string) => void }) {
+  const nodeName = (nodeId: string) => plant.nodes.find((node) => node.id === nodeId)?.name ?? nodeId;
+  const materialName = (materialId: string) => plant.materials.find((material) => material.id === materialId)?.name ?? materialId;
+
   return (
     <div className="connections-panel" aria-label="Connection inspector">
-      <h3>Connections</h3>
+      <h3>Rutas de proceso</h3>
       <div className="connection-list">
-        {connections.map((connection) => (
-          <button
-            key={connection.id}
-            type="button"
-            className={`connection-row ${connection.enabled ? '' : 'disabled'}`}
-            aria-label={`Edit connection ${connection.id}`}
-            onClick={() => onEdit(connection.id)}
-          >
-            <strong>{connection.sourceNodeId} → {connection.targetNodeId}</strong>
-            <span>
-              {connection.materialTypes?.join(', ') || 'all materials'} · {connection.capacity ?? '∞'} cap · {connection.transportTime ?? 0} min
-            </span>
-          </button>
-        ))}
+        {connections.map((connection) => {
+          const materialCopy = connection.materialTypes?.map(materialName).join(', ') || 'todos los materiales';
+          return (
+            <button
+              key={connection.id}
+              type="button"
+              className={`connection-row ${connection.enabled ? '' : 'disabled'}`}
+              aria-label={`Edit connection ${connection.id}`}
+              onClick={() => onEdit(connection.id)}
+            >
+              <strong>{nodeName(connection.sourceNodeId)} → {nodeName(connection.targetNodeId)}</strong>
+              <span>
+                Material: {materialCopy} · Capacidad: {connection.capacity ?? '∞'} kg/h · Transferencia: {connection.transportTime ?? 0} min
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -2149,8 +2187,14 @@ function PlannerOrdersPanel({ plant, onUpdateOrder }: { plant: Plant; onUpdateOr
   );
 }
 
+const readinessLabels: Record<ReturnType<typeof validatePlant>['status'], string> = {
+  ready: 'Modelo validado',
+  ready_with_warnings: 'Validado con avisos',
+  not_ready: 'Bloqueado',
+};
+
 function ReadinessBadge({ status }: { status: ReturnType<typeof validatePlant>['status'] }) {
-  return <div className={`readiness-badge ${status}`}>{status.replaceAll('_', ' ')}</div>;
+  return <div className={`readiness-badge ${status}`}>{readinessLabels[status]}</div>;
 }
 
 function ScheduleTimeline({ schedule, plant }: { schedule: Schedule; plant: Plant }) {

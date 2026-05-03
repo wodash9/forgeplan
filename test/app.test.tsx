@@ -66,10 +66,10 @@ describe('ForgePlan visual plant editor', () => {
   it('renders each node as the ISO-style equipment symbol itself instead of a square card with an icon inside', () => {
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Planificación local de producción' })).toBeInTheDocument();
-    expect(screen.getByText(/planta.*pedidos.*cuellos de botella/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Centro operativo de planificación' })).toBeInTheDocument();
+    expect(screen.getByText(/Modelo de planta.*demanda.*cuellos de botella/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'PFG Feed Production Plant' })).toBeInTheDocument();
-    expect(screen.getByText('ready')).toBeInTheDocument();
+    expect(screen.getByText('Modelo validado')).toBeInTheDocument();
     expect(screen.getByTestId('forgeplan-flow-canvas')).toBeInTheDocument();
     const dosingLineNode = screen.getByLabelText('Línia Dosificació LD line equipment node');
     expect(dosingLineNode).toBeInTheDocument();
@@ -120,7 +120,7 @@ describe('ForgePlan visual plant editor', () => {
     await user.click(screen.getByRole('button', { name: 'Create node' }));
 
     expect(screen.getByLabelText('CIP Skid custom equipment node')).toBeInTheDocument();
-    expect(screen.getByText('15')).toBeInTheDocument();
+    expect(screen.getAllByText('15').length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: 'Open CIP Skid properties' }));
     expect(screen.getByRole('dialog', { name: 'CIP Skid properties' })).toBeInTheDocument();
     expect(screen.getByLabelText('Custom equipment class')).toHaveValue('CIP skid');
@@ -567,7 +567,7 @@ describe('ForgePlan visual plant editor', () => {
     await user.click(screen.getByRole('button', { name: 'Import model' }));
 
     expect(screen.getByRole('heading', { name: 'Imported CIP Plant' })).toBeInTheDocument();
-    expect(screen.getByText(/Saved to local DB/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Saved to local DB/).length).toBeGreaterThan(0);
   });
 
   it('falls back to localStorage if opening IndexedDB fails while persisting the browser model', async () => {
@@ -602,7 +602,7 @@ describe('ForgePlan visual plant editor', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: 'Persisted CIP Plant' })).toBeInTheDocument();
-    expect(await screen.findByText(/Saved to local DB/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText(/Saved to local DB/).length).toBeGreaterThan(0));
   });
 
   it('renders planner-facing orders and lets the planner edit demo demand', async () => {

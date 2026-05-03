@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-05-03)
 
 ## Corpus Check
-- 33 files · ~41,155 words
+- 33 files · ~41,328 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 863 nodes · 1856 edges · 34 communities detected
+- 865 nodes · 1858 edges · 33 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -43,7 +43,6 @@
 - [[_COMMUNITY_Community 30|Community 30]]
 - [[_COMMUNITY_Community 31|Community 31]]
 - [[_COMMUNITY_Community 32|Community 32]]
-- [[_COMMUNITY_Community 33|Community 33]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `ha` - 49 edges
@@ -59,37 +58,37 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `wb()` --calls--> `l()`  [EXTRACTED]
-  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 0_
-- `tf()` --calls--> `r()`  [EXTRACTED]
-  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 7_
+  dist-web/assets/index-BWeAlinT.js → dist-web/assets/index-BWeAlinT.js  _Bridges community 4 → community 0_
+- `G_()` --calls--> `r()`  [EXTRACTED]
+  dist-web/assets/index-BWeAlinT.js → dist-web/assets/index-BWeAlinT.js  _Bridges community 4 → community 8_
 - `R0()` --calls--> `Q_()`  [EXTRACTED]
-  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 1_
-- `K_()` --calls--> `er()`  [EXTRACTED]
-  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 12_
-- `K_()` --calls--> `lC()`  [EXTRACTED]
-  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 3_
+  dist-web/assets/index-BWeAlinT.js → dist-web/assets/index-BWeAlinT.js  _Bridges community 4 → community 2_
+- `K_()` --calls--> `R0()`  [EXTRACTED]
+  dist-web/assets/index-BWeAlinT.js → dist-web/assets/index-BWeAlinT.js  _Bridges community 2 → community 0_
+- `K_()` --calls--> `nM()`  [EXTRACTED]
+  dist-web/assets/index-BWeAlinT.js → dist-web/assets/index-BWeAlinT.js  _Bridges community 0 → community 1_
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.02
-Nodes (136): $_(), $0(), _2(), a0(), Ai(), aj(), aN(), at() (+128 more)
+Nodes (142): $_(), $0(), _2(), a0(), ah(), Ai(), ay(), _b() (+134 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.04
-Nodes (34): Af, AM, bl(), bv(), CM(), cu, d0, Dl() (+26 more)
+Cohesion: 0.03
+Nodes (18): bv(), cC(), CM(), eM(), fS(), ha, jC(), Jv() (+10 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.04
-Nodes (4): fS(), ha, ou, Rl
+Cohesion: 0.05
+Nodes (24): Af, AM, bl(), cu, d0, Dl(), fa(), fu (+16 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.05
-Nodes (51): aC, aw(), B0(), b2(), bN(), Cf(), clamp(), cS() (+43 more)
+Nodes (53): aC, aj(), at(), aw(), B0(), bN(), Cf(), clamp() (+45 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.05
-Nodes (39): a(), a2(), BT(), bx(), C2(), dC(), El(), G_() (+31 more)
+Nodes (41): a(), a2(), aN(), bx(), C2(), copy(), cS(), DN() (+33 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.05
@@ -97,15 +96,15 @@ Nodes (32): addCustomPlantNode(), addMixer(), addPlantConnection(), addProductTo
 
 ### Community 6 - "Community 6"
 Cohesion: 0.07
-Nodes (40): Al(), Av(), bC(), cN(), $f(), fT(), ga(), Gt() (+32 more)
+Nodes (42): Al(), Av(), bC(), cN(), $f(), fE(), fT(), ga() (+34 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.08
-Nodes (45): bE(), cE(), CT(), _E(), eE(), fE(), Ff(), fN() (+37 more)
+Nodes (44): bE(), cE(), CT(), _E(), eE(), Ff(), fN(), Fv() (+36 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.06
-Nodes (12): dE(), du, J0(), kl, kx(), lh(), MM(), oC() (+4 more)
+Cohesion: 0.07
+Nodes (12): dE(), du, eh, G_(), J0(), kl, lh(), MM() (+4 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.08
@@ -120,23 +119,23 @@ Cohesion: 0.14
 Nodes (3): ForgePlanLocalStore, StoreRelationshipError, StoreValidationError
 
 ### Community 12 - "Community 12"
-Cohesion: 0.12
-Nodes (15): ah(), cC(), Df, dx(), er(), HC(), hu(), jC() (+7 more)
-
-### Community 13 - "Community 13"
 Cohesion: 0.22
 Nodes (1): pa
 
-### Community 14 - "Community 14"
+### Community 13 - "Community 13"
 Cohesion: 0.52
 Nodes (6): error(), hasRouteForMaterial(), toResult(), validateDomain(), validatePlant(), warning()
 
-### Community 15 - "Community 15"
+### Community 14 - "Community 14"
 Cohesion: 0.4
 Nodes (1): ResizeObserverMock
 
-### Community 16 - "Community 16"
+### Community 15 - "Community 15"
 Cohesion: 0.5
+Nodes (0):
+
+### Community 16 - "Community 16"
+Cohesion: 1.0
 Nodes (0):
 
 ### Community 17 - "Community 17"
@@ -203,62 +202,58 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0):
 
-### Community 33 - "Community 33"
-Cohesion: 1.0
-Nodes (0):
-
 ## Knowledge Gaps
 - **4 isolated node(s):** `InvalidJsonError`, `InvalidSolveOptionsError`, `NotFoundError`, `PayloadTooLargeError`
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 17`** (2 nodes): `readFixture()`, `ortoolsCpSatAdapter.test.ts`
+- **Thin community `Community 16`** (2 nodes): `readFixture()`, `ortoolsCpSatAdapter.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 18`** (2 nodes): `readPlantFixture()`, `backendApi.test.ts`
+- **Thin community `Community 17`** (2 nodes): `readPlantFixture()`, `backendApi.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 19`** (2 nodes): `readFixture()`, `localSolveRunner.test.ts`
+- **Thin community `Community 18`** (2 nodes): `readFixture()`, `localSolveRunner.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 20`** (2 nodes): `readFixture()`, `solver.test.ts`
+- **Thin community `Community 19`** (2 nodes): `readFixture()`, `solver.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 21`** (2 nodes): `readPlantFixture()`, `localStore.test.ts`
+- **Thin community `Community 20`** (2 nodes): `readPlantFixture()`, `localStore.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 22`** (2 nodes): `validatePlant.test.ts`, `readFixture()`
+- **Thin community `Community 21`** (2 nodes): `validatePlant.test.ts`, `readFixture()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 23`** (1 nodes): `vite.config.ts`
+- **Thin community `Community 22`** (1 nodes): `vite.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 24`** (1 nodes): `landing.test.tsx`
+- **Thin community `Community 23`** (1 nodes): `landing.test.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 25`** (1 nodes): `forgeplanSolveCli.test.ts`
+- **Thin community `Community 24`** (1 nodes): `forgeplanSolveCli.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 26`** (1 nodes): `app.test.tsx`
+- **Thin community `Community 25`** (1 nodes): `app.test.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 27`** (1 nodes): `index.ts`
+- **Thin community `Community 26`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 28`** (1 nodes): `vite-env.d.ts`
+- **Thin community `Community 27`** (1 nodes): `vite-env.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 29`** (1 nodes): `index.ts`
+- **Thin community `Community 28`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 30`** (1 nodes): `node.ts`
+- **Thin community `Community 29`** (1 nodes): `node.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 31`** (1 nodes): `plantSchema.ts`
+- **Thin community `Community 30`** (1 nodes): `plantSchema.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 32`** (1 nodes): `LandingPage.tsx`
+- **Thin community `Community 31`** (1 nodes): `LandingPage.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 33`** (1 nodes): `main.tsx`
+- **Thin community `Community 32`** (1 nodes): `main.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ha` connect `Community 2` to `Community 0`, `Community 1`, `Community 3`, `Community 12`?**
-  _High betweenness centrality (0.071) - this node is a cross-community bridge._
-- **Why does `qE()` connect `Community 8` to `Community 0`, `Community 1`?**
+- **Why does `ha` connect `Community 1` to `Community 0`, `Community 3`, `Community 4`?**
+  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+- **Why does `qE()` connect `Community 8` to `Community 0`, `Community 1`, `Community 2`?**
   _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **Why does `Rl` connect `Community 2` to `Community 0`, `Community 1`, `Community 3`?**
+- **Why does `Rl` connect `Community 1` to `Community 0`, `Community 2`, `Community 3`?**
   _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **What connects `InvalidJsonError`, `InvalidSolveOptionsError`, `NotFoundError` to the rest of the system?**
   _4 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
