@@ -11,6 +11,23 @@ function readFixture(name: string): unknown {
 }
 
 describe('OR-Tools CP-SAT adapter', () => {
+  it('uses FORGEPLAN_PYTHON_BINARY as the default local Python boundary', () => {
+    const previous = process.env.FORGEPLAN_PYTHON_BINARY;
+    process.env.FORGEPLAN_PYTHON_BINARY = '/tmp/forgeplan-python-with-ortools';
+
+    try {
+      const adapter = new OrToolsCpSatAdapter();
+
+      expect(adapter.pythonBinary).toBe('/tmp/forgeplan-python-with-ortools');
+    } finally {
+      if (previous === undefined) {
+        delete process.env.FORGEPLAN_PYTHON_BINARY;
+      } else {
+        process.env.FORGEPLAN_PYTHON_BINARY = previous;
+      }
+    }
+  });
+
   it('reports availability without throwing', () => {
     const adapter = new OrToolsCpSatAdapter();
     const availability = adapter.checkAvailability();

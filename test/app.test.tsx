@@ -26,6 +26,7 @@ import { validatePlant } from '../src/validation/validatePlant.js';
 describe('ForgePlan visual plant editor', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     window.localStorage.clear();
   });
 
@@ -622,6 +623,15 @@ describe('ForgePlan visual plant editor', () => {
     expect(ordersPanel).toHaveTextContent('95 kg');
   });
 
+  it('keeps the public planner demo mock-only unless the local solver profile is enabled', () => {
+    render(<App />);
+
+    expect(screen.queryByText('CP-SAT local')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Límite CP-SAT (s)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Workers CP-SAT')).not.toBeInTheDocument();
+    expect(screen.queryByText(/127\.0\.0\.1:8787/)).not.toBeInTheDocument();
+  });
+
   it('runs the planner demo solve and explains the result in planner language', async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -647,6 +657,7 @@ describe('ForgePlan visual plant editor', () => {
   });
 
   it('sends the current plant to the local CP-SAT API when the planner selects the real solver path', async () => {
+    vi.stubEnv('VITE_FORGEPLAN_ENABLE_LOCAL_CP_SAT', '1');
     const user = userEvent.setup();
     const cpSatSchedule = {
       id: 'schedule_cp_sat_ui_test',

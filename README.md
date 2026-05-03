@@ -23,7 +23,7 @@ Included:
 - simple Gantt/timeline schedule visualization
 - local OR-Tools CP-SAT adapter for Node/Python environments
 - PFG/OptiPlan CP-SAT production layer with batching, dosing levels, silos, inventory reservoirs, granulator assignment, final storage and dispatch constraints
-- local solve CLI boundary for mock/CP-SAT schedules
+- local solve CLI boundary for CP-SAT-first local schedules and explicit mock fallback
 - local HTTP API backed by SQLite for plants, scenarios, schedules, events and solve requests
 - product catalog with simple BOM/dependency graph
 - equipment production modes: continuous or batch
@@ -44,7 +44,11 @@ npm run typecheck
 npm test
 npm run build
 npm run build:web
+npm run solver:bootstrap
+npm run solver:check
 ```
+
+`npm run solver:bootstrap` creates a local `.venv/` and installs the pinned OR-Tools runtime from `requirements-solver.txt`. `.venv/` is ignored by git.
 
 ## Public demo deployment
 
@@ -64,7 +68,7 @@ Recommended Coolify settings:
 - Domain/FQDN: `https://forgeplan.etharlia.com`.
 - Health path: `/`.
 
-The **CP-SAT local** planner option requires a separate local API started with `npm run server` and, for real CP-SAT, Python with OR-Tools. The frontend API base defaults to `http://127.0.0.1:8787`; override it at web build time with `VITE_FORGEPLAN_API_BASE_URL` only for trusted/private deployments.
+The **CP-SAT local** planner option is hidden in the public web build. Enable it only for trusted local/private development with `VITE_FORGEPLAN_ENABLE_LOCAL_CP_SAT=1`, a separate local API started with `npm run server`, and Python with OR-Tools. The frontend API base defaults to `http://127.0.0.1:8787`; override it at web build time with `VITE_FORGEPLAN_API_BASE_URL` only for trusted/private deployments.
 
 ## Fixtures
 
@@ -104,17 +108,18 @@ ForgePlan translates canonical `Plant + Scenario` data into a solver-neutral `So
 
 The `MockSolverAdapter` creates deterministic feasible/infeasible schedules for integration tests and UI plumbing. It does not optimize and should not be used for production decisions.
 
-Node-only solver integrations live behind separate imports so the browser bundle stays clean. `OrToolsCpSatAdapter` runs a local Python OR-Tools CP-SAT worker through stdin/stdout JSON. For generic plants it supports fixed-resource operations, no-overlap, route precedences, earliest starts, due-date tardiness KPIs, horizon, and a weighted late/tardiness/makespan objective. For PFG plants with `metadata.pfgStage`, it switches to the richer PFG/OptiPlan layer covering batch splitting, multi-level dosing, intermediate/final silo assignment, event-based inventory reservoirs, granulator assignment, dispatch assignment, sequence-dependent setup/changeover delays, due-date cuts and restricted due-dominance symmetry. It fails explicitly when Python or OR-Tools is unavailable; this repository does not install OR-Tools automatically. See `docs/solver-pfg-cpsat-v2.md` for the implemented PFG constraints and modeling assumptions.
+Node-only solver integrations live behind separate imports so the browser bundle stays clean. `OrToolsCpSatAdapter` runs a local Python OR-Tools CP-SAT worker through stdin/stdout JSON. For generic plants it supports fixed-resource operations, no-overlap, route precedences, earliest starts, due-date tardiness KPIs, horizon, and a weighted late/tardiness/makespan objective. For PFG plants with `metadata.pfgStage`, it switches to the richer PFG/OptiPlan layer covering batch splitting, multi-level dosing, intermediate/final silo assignment, event-based inventory reservoirs, granulator assignment, dispatch assignment, sequence-dependent setup/changeover delays, due-date cuts and restricted due-dominance symmetry. It fails explicitly when Python or OR-Tools is unavailable; use `npm run solver:bootstrap` to create the local `.venv/` with the pinned OR-Tools runtime. See `docs/solver-pfg-cpsat-v2.md` for the implemented PFG constraints and modeling assumptions.
 
-Run a local solve from a built checkout:
+Run a real local CP-SAT solve from a built checkout:
 
 ```bash
+npm run solver:bootstrap
 npm run build
-npm run solve -- fixtures/minimal-valid-plant.json --strategy mock
-npm run solve -- fixtures/minimal-valid-plant.json --strategy cp_sat --time-limit 5 --workers 4
+node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json --python .venv/bin/python --time-limit 5 --workers 1
+node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json --strategy mock
 ```
 
-The command prints canonical `Schedule` JSON to stdout. `mock` is the safe default; `cp_sat` requires local Python OR-Tools. TypeScript build artifacts go to `dist/`; Vite web artifacts go to `dist-web/` so the local solve CLI remains available after web builds.
+The command prints canonical `Schedule` JSON to stdout. The CLI is CP-SAT-first in local Node contexts and fails explicitly when Python or OR-Tools is unavailable; pass `--strategy mock` for deterministic plumbing/demo checks. TypeScript build artifacts go to `dist/`; Vite web artifacts go to `dist-web/` so the local solve CLI remains available after web builds.
 
 ## Local HTTP API
 
@@ -151,8 +156,10 @@ Use **Planificar pedidos** in **Demo mock** mode to build a local solver model i
 To exercise **CP-SAT local** from the web UI, run the local API in another terminal and provide a Python with OR-Tools:
 
 ```bash
-FORGEPLAN_PYTHON_BINARY=/path/to/python-with-ortools npm run server
-npm run dev
+npm run solver:bootstrap
+FORGEPLAN_PYTHON_BINARY=.venv/bin/python npm run server
+VITE_FORGEPLAN_ENABLE_LOCAL_CP_SAT=1 npm run dev
+# or simply: npm run dev:local-solver
 ```
 
 The browser posts the current plant to the configured local API base (`VITE_FORGEPLAN_API_BASE_URL`, default `http://127.0.0.1:8787`) at `/api/plants` and then calls `POST /api/solve/cp-sat` with the selected `timeLimitSeconds` and `workers`. The solver remains local unless you intentionally point the build at a trusted/private API; no public cloud solver is enabled by default.

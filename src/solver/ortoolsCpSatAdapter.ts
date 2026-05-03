@@ -29,7 +29,7 @@ export class OrToolsCpSatAdapter implements SolverAdapter {
   readonly pythonBinary: string;
 
   constructor(options: OrToolsCpSatAdapterOptions = {}) {
-    this.pythonBinary = options.pythonBinary ?? 'python3';
+    this.pythonBinary = options.pythonBinary ?? process.env.FORGEPLAN_PYTHON_BINARY ?? 'python3';
   }
 
   checkAvailability(): OrToolsAvailability {

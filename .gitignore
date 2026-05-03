@@ -2,6 +2,7 @@ node_modules/
 dist/
 coverage/
 .env
+.env*.local
 .DS_Store
 dist-web/
 .idea/
@@ -9,3 +10,4 @@ dist-web/
 *.sqlite
 *.sqlite3
 graphify-out/cache/
+.venv/

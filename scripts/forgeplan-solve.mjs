@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 
 function parseArgs(argv) {
   const args = {
-    strategy: 'mock',
+    strategy: 'cp_sat',
     timeLimitSeconds: 30,
     workers: 1,
     pythonBinary: undefined,
@@ -34,7 +34,7 @@ function parseArgs(argv) {
 }
 
 function usage() {
-  return `Usage: node scripts/forgeplan-solve.mjs <plant.json> [--strategy mock|cp_sat] [--time-limit seconds] [--workers count] [--python python3]\n\nExamples:\n  node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json\n  node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json --strategy cp_sat --time-limit 5 --workers 4\n`;
+  return `Usage: node scripts/forgeplan-solve.mjs <plant.json> [--strategy cp_sat|mock] [--time-limit seconds] [--workers count] [--python python3]\n\nExamples:\n  node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json --python .venv/bin/python\n  node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json --strategy mock\n  node scripts/forgeplan-solve.mjs fixtures/minimal-valid-plant.json --strategy cp_sat --time-limit 5 --workers 4 --python .venv/bin/python\n`;
 }
 
 try {

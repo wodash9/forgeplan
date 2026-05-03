@@ -8,9 +8,12 @@
     "build": "tsc -p tsconfig.json",
     "build:web": "vite build",
     "dev": "vite",
+    "dev:local-solver": "VITE_FORGEPLAN_ENABLE_LOCAL_CP_SAT=1 vite",
     "preview": "vite preview",
     "solve": "node scripts/forgeplan-solve.mjs",
     "server": "npm run build && node scripts/forgeplan-server.mjs",
+    "solver:bootstrap": "python3 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/python -m pip install -r requirements-solver.txt",
+    "solver:check": "${FORGEPLAN_PYTHON_BINARY:-.venv/bin/python} -c \"import ortools; print(ortools.__version__)\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },

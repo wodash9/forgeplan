@@ -182,6 +182,10 @@ const localSolverApiBaseUrl = (configuredLocalSolverApiBaseUrl && configuredLoca
   ? configuredLocalSolverApiBaseUrl
   : 'http://127.0.0.1:8787').replace(/\/+$/, '');
 
+function isLocalCpSatPlannerEnabled(): boolean {
+  return import.meta.env.VITE_FORGEPLAN_ENABLE_LOCAL_CP_SAT === '1';
+}
+
 function metadataString(metadata: Record<string, unknown> | undefined, key: string): string | undefined {
   const value = metadata?.[key];
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -765,6 +769,8 @@ export default function App() {
   const [isSolving, setIsSolving] = useState(false);
   const pendingPositionChangesRef = useRef<PositionChangeLike[]>([]);
   const dragFrameRef = useRef<number | null>(null);
+  const localCpSatPlannerEnabled = isLocalCpSatPlannerEnabled();
+  const activePlannerSolveStrategy: PlannerSolveStrategy = localCpSatPlannerEnabled ? plannerSolveStrategy : 'mock';
   const validation = useMemo(() => validatePlant(plant), [plant]);
   const scenario = useMemo(() => createScenario(plant), [plant]);
   const selectedNode = plant.nodes.find((node) => node.id === selectedNodeId) ?? plant.nodes[0];
@@ -880,7 +886,7 @@ export default function App() {
     setSolveError(null);
     setIsSolving(true);
     try {
-      if (plannerSolveStrategy === 'mock') {
+      if (activePlannerSolveStrategy === 'mock') {
         const solverModel = buildSolverModel(plant, scenario);
         const result = mockSolverAdapter.solve(solverModel);
         setSchedule(result.schedule);
@@ -1068,7 +1074,7 @@ export default function App() {
               Estrategia de planificación
               <select
                 aria-label="Estrategia de planificación"
-                value={plannerSolveStrategy}
+                value={activePlannerSolveStrategy}
                 onChange={(event) => {
                   setPlannerSolveStrategy(event.target.value as PlannerSolveStrategy);
                   setSchedule(null);
@@ -1076,10 +1082,10 @@ export default function App() {
                 }}
               >
                 <option value="mock">Demo mock</option>
-                <option value="cp_sat">CP-SAT local</option>
+                {localCpSatPlannerEnabled && <option value="cp_sat">CP-SAT local</option>}
               </select>
             </label>
-            {plannerSolveStrategy === 'cp_sat' && (
+            {localCpSatPlannerEnabled && activePlannerSolveStrategy === 'cp_sat' && (
               <div className="cp-sat-options">
                 <label>
                   Límite CP-SAT (s)
