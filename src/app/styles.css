@@ -90,6 +90,19 @@ h1, h2, h3, p { margin-top: 0; }
   font-weight: 800;
 }
 .cp-sat-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cp-sat-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #60726a;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+.cp-sat-hint code {
+  color: #17492e;
+  font-weight: 950;
+  word-break: break-all;
+}
 .palette button.planner-action { margin-top: 12px; background: #f59e0b; color: #17382f; box-shadow: 0 10px 24px rgb(245 158 11 / 24%); }
 .solver-demo-badge {
   display: inline-flex;

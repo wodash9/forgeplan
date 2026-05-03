@@ -1,10 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 describe('forgeplan solve CLI', () => {
-  it('prints a feasible mock schedule for the minimal fixture', () => {
+  beforeAll(() => {
     execFileSync('npm', ['run', 'build'], { cwd: process.cwd(), stdio: 'pipe', encoding: 'utf8' });
+  }, 60_000);
 
+  it('prints a feasible mock schedule for the minimal fixture', () => {
     const output = execFileSync('node', ['scripts/forgeplan-solve.mjs', 'fixtures/minimal-valid-plant.json', '--strategy', 'mock'], {
       cwd: process.cwd(),
       encoding: 'utf8',
@@ -17,8 +19,6 @@ describe('forgeplan solve CLI', () => {
   });
 
   it('fails clearly for an unsupported strategy', () => {
-    execFileSync('npm', ['run', 'build'], { cwd: process.cwd(), stdio: 'pipe', encoding: 'utf8' });
-
     expect(() =>
       execFileSync('node', ['scripts/forgeplan-solve.mjs', 'fixtures/minimal-valid-plant.json', '--strategy', 'bogus'], {
         cwd: process.cwd(),

@@ -46,6 +46,26 @@ npm run build
 npm run build:web
 ```
 
+## Public demo deployment
+
+ForgePlan's safe public deployment target is the browser-only planner demo. It runs the deterministic mock solver locally in the browser and does not expose the local SQLite/CP-SAT API.
+
+Coolify can deploy the root `Dockerfile`:
+
+```bash
+docker build -t forgeplan:local .
+docker run --rm -p 8080:80 forgeplan:local
+```
+
+Recommended Coolify settings:
+
+- Build pack: Dockerfile from repository root.
+- Exposed port: `80`.
+- Domain/FQDN: `https://forgeplan.etharlia.com`.
+- Health path: `/`.
+
+The **CP-SAT local** planner option requires a separate local API started with `npm run server` and, for real CP-SAT, Python with OR-Tools. The frontend API base defaults to `http://127.0.0.1:8787`; override it at web build time with `VITE_FORGEPLAN_API_BASE_URL` only for trusted/private deployments.
+
 ## Fixtures
 
 - `fixtures/minimal-valid-plant.json` — a small ready plant with one material, source, mixer, dispatch, route, and order.
@@ -135,7 +155,7 @@ FORGEPLAN_PYTHON_BINARY=/path/to/python-with-ortools npm run server
 npm run dev
 ```
 
-The browser posts the current plant to `http://127.0.0.1:8787/api/plants` and then calls `POST /api/solve/cp-sat` with the selected `timeLimitSeconds` and `workers`. The solver remains local; no cloud service is called.
+The browser posts the current plant to the configured local API base (`VITE_FORGEPLAN_API_BASE_URL`, default `http://127.0.0.1:8787`) at `/api/plants` and then calls `POST /api/solve/cp-sat` with the selected `timeLimitSeconds` and `workers`. The solver remains local unless you intentionally point the build at a trusted/private API; no public cloud solver is enabled by default.
 
 ## Next phase candidate
 

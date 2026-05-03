@@ -177,7 +177,10 @@ type ProductInput = {
 type ActiveScreen = 'plant' | 'products';
 type PlannerSolveStrategy = 'mock' | 'cp_sat';
 
-const localSolverApiBaseUrl = 'http://127.0.0.1:8787';
+const configuredLocalSolverApiBaseUrl = import.meta.env.VITE_FORGEPLAN_API_BASE_URL?.trim();
+const localSolverApiBaseUrl = (configuredLocalSolverApiBaseUrl && configuredLocalSolverApiBaseUrl.length > 0
+  ? configuredLocalSolverApiBaseUrl
+  : 'http://127.0.0.1:8787').replace(/\/+$/, '');
 
 function metadataString(metadata: Record<string, unknown> | undefined, key: string): string | undefined {
   const value = metadata?.[key];
@@ -1069,6 +1072,9 @@ export default function App() {
                     onChange={(event) => setCpSatWorkers(event.target.value)}
                   />
                 </label>
+                <p className="cp-sat-hint">
+                  CP-SAT requiere la API local de ForgePlan en <code>{localSolverApiBaseUrl}</code>. La demo web pública usa “Demo mock”.
+                </p>
               </div>
             )}
           </div>
