@@ -1,7 +1,7 @@
 # Graph Report - .  (2026-05-03)
 
 ## Corpus Check
-- 33 files · ~41,111 words
+- 33 files · ~41,155 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -59,15 +59,15 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `wb()` --calls--> `l()`  [EXTRACTED]
-  dist-web/assets/index-w5QQR-Sd.js → dist-web/assets/index-w5QQR-Sd.js  _Bridges community 4 → community 0_
+  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 0_
 - `tf()` --calls--> `r()`  [EXTRACTED]
-  dist-web/assets/index-w5QQR-Sd.js → dist-web/assets/index-w5QQR-Sd.js  _Bridges community 4 → community 7_
+  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 7_
 - `R0()` --calls--> `Q_()`  [EXTRACTED]
-  dist-web/assets/index-w5QQR-Sd.js → dist-web/assets/index-w5QQR-Sd.js  _Bridges community 4 → community 1_
+  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 1_
 - `K_()` --calls--> `er()`  [EXTRACTED]
-  dist-web/assets/index-w5QQR-Sd.js → dist-web/assets/index-w5QQR-Sd.js  _Bridges community 4 → community 12_
+  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 12_
 - `K_()` --calls--> `lC()`  [EXTRACTED]
-  dist-web/assets/index-w5QQR-Sd.js → dist-web/assets/index-w5QQR-Sd.js  _Bridges community 4 → community 3_
+  dist-web/assets/index-fSMpdHIU.js → dist-web/assets/index-fSMpdHIU.js  _Bridges community 4 → community 3_
 
 ## Communities
 
