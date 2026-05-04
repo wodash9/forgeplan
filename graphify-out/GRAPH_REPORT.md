@@ -1,11 +1,11 @@
-# Graph Report - .  (2026-05-03)
+# Graph Report - .  (2026-05-04)
 
 ## Corpus Check
-- 33 files · ~41,971 words
+- 33 files · ~43,308 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 873 nodes · 1869 edges · 34 communities detected
+- 877 nodes · 1838 edges · 34 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -46,62 +46,62 @@
 - [[_COMMUNITY_Community 33|Community 33]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `fa` - 49 edges
-2. `K_()` - 31 edges
-3. `qE()` - 31 edges
-4. `Ve()` - 30 edges
-5. `mE()` - 26 edges
-6. `st()` - 24 edges
-7. `en()` - 23 edges
-8. `_T()` - 21 edges
-9. `Dl` - 21 edges
-10. `ForgePlanLocalStore` - 20 edges
+1. `pa` - 49 edges
+2. `qE()` - 35 edges
+3. `t_()` - 30 edges
+4. `mE()` - 27 edges
+5. `st()` - 25 edges
+6. `Dl` - 21 edges
+7. `ForgePlanLocalStore` - 20 edges
+8. `Zn()` - 18 edges
+9. `bT()` - 18 edges
+10. `ar` - 17 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `wb()` --calls--> `l()`  [EXTRACTED]
-  dist-web/assets/index-Rmj4VFzm.js → dist-web/assets/index-Rmj4VFzm.js  _Bridges community 6 → community 3_
-- `cv()` --calls--> `l()`  [EXTRACTED]
-  dist-web/assets/index-Rmj4VFzm.js → dist-web/assets/index-Rmj4VFzm.js  _Bridges community 6 → community 0_
-- `G_()` --calls--> `r()`  [EXTRACTED]
-  dist-web/assets/index-Rmj4VFzm.js → dist-web/assets/index-Rmj4VFzm.js  _Bridges community 6 → community 4_
-- `K_()` --calls--> `rT()`  [EXTRACTED]
-  dist-web/assets/index-Rmj4VFzm.js → dist-web/assets/index-Rmj4VFzm.js  _Bridges community 6 → community 7_
-- `K_()` --calls--> `cN()`  [EXTRACTED]
-  dist-web/assets/index-Rmj4VFzm.js → dist-web/assets/index-Rmj4VFzm.js  _Bridges community 6 → community 10_
+- `o_()` --calls--> `l()`  [EXTRACTED]
+  dist-web/assets/index-COZEt8gL.js → dist-web/assets/index-COZEt8gL.js  _Bridges community 5 → community 13_
+- `k2()` --calls--> `l()`  [EXTRACTED]
+  dist-web/assets/index-COZEt8gL.js → dist-web/assets/index-COZEt8gL.js  _Bridges community 5 → community 3_
+- `h2()` --calls--> `l()`  [EXTRACTED]
+  dist-web/assets/index-COZEt8gL.js → dist-web/assets/index-COZEt8gL.js  _Bridges community 5 → community 0_
+- `mv()` --calls--> `l()`  [EXTRACTED]
+  dist-web/assets/index-COZEt8gL.js → dist-web/assets/index-COZEt8gL.js  _Bridges community 5 → community 10_
+- `lf()` --calls--> `r()`  [EXTRACTED]
+  dist-web/assets/index-COZEt8gL.js → dist-web/assets/index-COZEt8gL.js  _Bridges community 5 → community 1_
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.02
-Nodes (135): $_(), _2(), ah(), _b(), B0(), bC(), bl(), Bo() (+127 more)
+Nodes (137): __(), $0(), _2(), aC(), aM(), aN(), aT(), av() (+129 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.03
-Nodes (17): aC, bn(), bv(), cC(), Dl, dS(), Dy(), fa (+9 more)
+Nodes (10): aE(), ar, Dl, kM(), lf(), Mu(), pa, qn (+2 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.05
-Nodes (25): Af, Ai, AM, cu, d0, Dv(), fN(), fu (+17 more)
+Nodes (24): Bf, c0, d0, fM(), G0(), gu, H0(), Hl (+16 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.05
-Nodes (51): $0(), aj(), aw(), ay(), b2(), Cf(), clamp(), Df (+43 more)
+Nodes (59): b2(), c2(), Ci(), clamp(), copy(), cv(), cw(), dj() (+51 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.05
-Nodes (12): bx(), du, G_(), GC(), J0(), MM(), oE(), qE() (+4 more)
+Nodes (42): addCustomPlantNode(), addMixer(), addPlantConnection(), addProductToPlant(), boundedPositiveIntegerInput(), canonicalConnectionHandle(), connectionHandle(), createCustomNode() (+34 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.05
-Nodes (32): addCustomPlantNode(), addMixer(), addPlantConnection(), addProductToPlant(), boundedPositiveIntegerInput(), canonicalConnectionHandle(), connectionHandle(), createCustomNode() (+24 more)
+Cohesion: 0.06
+Nodes (40): A_(), a2(), aS(), BC(), cS(), dC(), dS(), e_() (+32 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.06
-Nodes (51): a(), a2(), aN(), bi(), C2(), CM(), copy(), cS() (+43 more)
+Cohesion: 0.09
+Nodes (39): Ai(), Bn(), bv(), Cf(), Cl(), Cn(), cu(), dN() (+31 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.07
-Nodes (48): AT(), bE(), bt(), cE(), CT(), dE(), _E(), e0() (+40 more)
+Nodes (11): ah, dE(), DM(), ev(), N0(), qE(), Rl, Ru() (+3 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.08
@@ -112,20 +112,20 @@ Cohesion: 0.13
 Nodes (30): createDefaultSolveAdapter(), describeBackendModels(), emptyResponse(), ensureScenarioMatchesSolveRequest(), errorResponse(), handleApiRequest(), handlePlants(), handleScenarios() (+22 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.12
-Nodes (32): Av(), Bf(), Ci(), Cl(), cN(), $f(), fT(), Gf() (+24 more)
+Cohesion: 0.1
+Nodes (22): aw(), bu(), En(), F0(), fv(), G2(), jn(), mv() (+14 more)
 
 ### Community 11 - "Community 11"
+Cohesion: 0.1
+Nodes (26): a0(), af(), cE(), cT(), dT(), eE(), ex(), fE() (+18 more)
+
+### Community 12 - "Community 12"
 Cohesion: 0.14
 Nodes (3): ForgePlanLocalStore, StoreRelationshipError, StoreValidationError
 
-### Community 12 - "Community 12"
-Cohesion: 0.22
-Nodes (8): gT(), Hv(), Nn(), Nv(), of(), rr(), sr(), vS()
-
 ### Community 13 - "Community 13"
-Cohesion: 0.25
-Nodes (1): ma
+Cohesion: 0.11
+Nodes (3): bT(), o_(), vl()
 
 ### Community 14 - "Community 14"
 Cohesion: 0.52
@@ -246,12 +246,12 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `fa` connect `Community 1` to `Community 0`, `Community 3`?**
-  _High betweenness centrality (0.069) - this node is a cross-community bridge._
-- **Why does `qE()` connect `Community 4` to `Community 0`, `Community 2`?**
+- **Why does `pa` connect `Community 1` to `Community 0`, `Community 2`, `Community 3`, `Community 5`, `Community 6`?**
+  _High betweenness centrality (0.067) - this node is a cross-community bridge._
+- **Why does `qE()` connect `Community 7` to `Community 0`, `Community 1`, `Community 2`, `Community 5`, `Community 6`, `Community 10`, `Community 11`?**
   _High betweenness centrality (0.037) - this node is a cross-community bridge._
-- **Why does `Dl` connect `Community 1` to `Community 0`, `Community 2`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `Dl` connect `Community 1` to `Community 0`, `Community 2`, `Community 10`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **What connects `InvalidJsonError`, `InvalidSolveOptionsError`, `NotFoundError` to the rest of the system?**
   _4 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**

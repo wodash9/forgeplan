@@ -449,6 +449,13 @@ const browserDbName = 'forgeplan-local-db';
 const browserPlantStoreName = 'plants';
 const browserLatestPlantKey = 'forgeplan.latestPlantId';
 
+export interface BrowserPlantSummary {
+  id: string;
+  name: string;
+  version: number;
+  updatedAt: string;
+}
+
 export function serializePlantModelForExport(plant: Plant): string {
   return JSON.stringify(plant, null, 2);
 }
@@ -482,13 +489,75 @@ function savePlantToLocalStorage(plant: Plant): void {
 function loadPlantFromLocalStorage(): Plant | undefined {
   const latestPlantId = window.localStorage.getItem(browserLatestPlantKey);
   if (!latestPlantId) return undefined;
-  const json = window.localStorage.getItem(`${browserPlantStoreName}:${latestPlantId}`);
+  return loadPlantFromLocalStorageById(latestPlantId);
+}
+
+function loadPlantFromLocalStorageById(plantId: string): Plant | undefined {
+  const json = window.localStorage.getItem(`${browserPlantStoreName}:${plantId}`);
   if (!json) return undefined;
   try {
     return importPlantModelFromJson(json);
   } catch {
     return undefined;
   }
+}
+
+function summarizeBrowserPlant(plant: Plant, updatedAt: string): BrowserPlantSummary {
+  return {
+    id: plant.id,
+    name: plant.name,
+    version: plant.version,
+    updatedAt,
+  };
+}
+
+function listPlantsFromLocalStorage(): BrowserPlantSummary[] {
+  if (typeof window === 'undefined') return [];
+  const summaries: BrowserPlantSummary[] = [];
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (!key?.startsWith(`${browserPlantStoreName}:`)) continue;
+    const plantId = key.slice(`${browserPlantStoreName}:`.length);
+    const plant = loadPlantFromLocalStorageById(plantId);
+    if (!plant) continue;
+    summaries.push(summarizeBrowserPlant(plant, 'LocalStorage'));
+  }
+  return sortBrowserPlantSummaries(summaries);
+}
+
+function sortBrowserPlantSummaries(summaries: BrowserPlantSummary[]): BrowserPlantSummary[] {
+  return [...summaries].sort((first, second) => {
+    if (first.id === window.localStorage.getItem(browserLatestPlantKey)) return -1;
+    if (second.id === window.localStorage.getItem(browserLatestPlantKey)) return 1;
+    return first.name.localeCompare(second.name);
+  });
+}
+
+function uniquePlantConfigurationId(name: string, existingIds: string[] = []): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'configuracion';
+  const baseId = `plant_${slug}`;
+  const usedIds = new Set(existingIds);
+  if (!usedIds.has(baseId)) return baseId;
+
+  let suffix = 2;
+  while (usedIds.has(`${baseId}_${suffix}`)) suffix += 1;
+  return `${baseId}_${suffix}`;
+}
+
+export function createNamedPlantConfiguration(plant: Plant, name: string, existingIds: string[] = []): Plant {
+  const trimmedName = name.trim();
+  if (!trimmedName) throw new Error('Plant configuration name is required.');
+  return {
+    ...plant,
+    id: uniquePlantConfigurationId(trimmedName, existingIds),
+    name: trimmedName,
+  };
 }
 
 function openBrowserPlantDb(): Promise<IDBDatabase> {
@@ -527,19 +596,96 @@ export async function loadLatestPlantModelFromBrowserDb(): Promise<Plant | undef
     });
     if (!latestPlantId) return loadPlantFromLocalStorage();
 
-    const json = await new Promise<string | undefined>((resolve, reject) => {
-      const tx = db!.transaction(browserPlantStoreName, 'readonly');
-      tx.onerror = () => reject(tx.error ?? new Error('Cannot read plant model'));
-      const request = tx.objectStore(browserPlantStoreName).get(latestPlantId);
-      request.onerror = () => reject(request.error ?? new Error('Cannot read plant row'));
-      request.onsuccess = () => {
-        const row = request.result as { json?: string } | undefined;
-        resolve(row?.json);
-      };
-    });
-    return json ? importPlantModelFromJson(json) : loadPlantFromLocalStorage();
+    const plant = await loadPlantModelFromOpenBrowserDb(db, latestPlantId);
+    return plant ?? loadPlantFromLocalStorage();
   } catch {
     return loadPlantFromLocalStorage();
+  } finally {
+    db?.close();
+  }
+}
+
+function loadPlantModelFromOpenBrowserDb(db: IDBDatabase, plantId: string): Promise<Plant | undefined> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(browserPlantStoreName, 'readonly');
+    tx.onerror = () => reject(tx.error ?? new Error('Cannot read plant model'));
+    const request = tx.objectStore(browserPlantStoreName).get(plantId);
+    request.onerror = () => reject(request.error ?? new Error('Cannot read plant row'));
+    request.onsuccess = () => {
+      const row = request.result as { json?: string } | undefined;
+      try {
+        resolve(row?.json ? importPlantModelFromJson(row.json) : undefined);
+      } catch {
+        resolve(undefined);
+      }
+    };
+  });
+}
+
+export async function loadPlantModelFromBrowserDb(plantId: string): Promise<Plant | undefined> {
+  if (typeof window === 'undefined') return undefined;
+  if (!('indexedDB' in window) || !window.indexedDB) return loadPlantFromLocalStorageById(plantId);
+
+  let db: IDBDatabase | undefined;
+  try {
+    db = await openBrowserPlantDb();
+    return await loadPlantModelFromOpenBrowserDb(db, plantId) ?? loadPlantFromLocalStorageById(plantId);
+  } catch {
+    return loadPlantFromLocalStorageById(plantId);
+  } finally {
+    db?.close();
+  }
+}
+
+export async function listBrowserPlantSummaries(): Promise<BrowserPlantSummary[]> {
+  if (typeof window === 'undefined') return [];
+  if (!('indexedDB' in window) || !window.indexedDB) return listPlantsFromLocalStorage();
+
+  let db: IDBDatabase | undefined;
+  try {
+    db = await openBrowserPlantDb();
+    const summaries = await new Promise<BrowserPlantSummary[]>((resolve, reject) => {
+      const tx = db!.transaction(browserPlantStoreName, 'readonly');
+      tx.onerror = () => reject(tx.error ?? new Error('Cannot list plant models'));
+      const request = tx.objectStore(browserPlantStoreName).getAll();
+      request.onerror = () => reject(request.error ?? new Error('Cannot list plant rows'));
+      request.onsuccess = () => {
+        const rows = request.result as { id?: string; name?: string; version?: number; updatedAt?: string; json?: string }[];
+        resolve(rows.flatMap((row) => {
+          try {
+            const plant = row.json ? importPlantModelFromJson(row.json) : undefined;
+            return plant ? [summarizeBrowserPlant(plant, row.updatedAt ?? 'IndexedDB')] : [];
+          } catch {
+            return [];
+          }
+        }));
+      };
+    });
+    const localStorageOnly = listPlantsFromLocalStorage().filter((localSummary) => !summaries.some((summary) => summary.id === localSummary.id));
+    return sortBrowserPlantSummaries([...summaries, ...localStorageOnly]);
+  } catch {
+    return listPlantsFromLocalStorage();
+  } finally {
+    db?.close();
+  }
+}
+
+export async function markLatestPlantModelInBrowserDb(plantId: string): Promise<void> {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(browserLatestPlantKey, plantId);
+  if (!('indexedDB' in window) || !window.indexedDB) return;
+
+  let db: IDBDatabase | undefined;
+  try {
+    db = await openBrowserPlantDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db!.transaction('metadata', 'readwrite');
+      tx.onerror = () => reject(tx.error ?? new Error('Cannot mark latest plant model'));
+      tx.oncomplete = () => resolve();
+      tx.objectStore('metadata').put({ key: browserLatestPlantKey, value: plantId });
+    });
+  } catch {
+    // localStorage has already recorded the active plant fallback.
   } finally {
     db?.close();
   }
@@ -758,6 +904,9 @@ export default function App() {
   const [exportingJson, setExportingJson] = useState(false);
   const [importingJson, setImportingJson] = useState(false);
   const [persistenceStatus, setPersistenceStatus] = useState('Not saved yet');
+  const [plantLibraryStatus, setPlantLibraryStatus] = useState('Sincronizando biblioteca local…');
+  const [savedPlants, setSavedPlants] = useState<BrowserPlantSummary[]>([]);
+  const [newPlantConfigName, setNewPlantConfigName] = useState('');
   const [storageHydrated, setStorageHydrated] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
@@ -810,6 +959,55 @@ export default function App() {
       })),
     [plant.connections],
   );
+
+  const refreshPlantLibrary = useCallback(async () => {
+    try {
+      const summaries = await listBrowserPlantSummaries();
+      setSavedPlants(summaries);
+      setPlantLibraryStatus(summaries.length > 0 ? `${summaries.length} configuración${summaries.length === 1 ? '' : 'es'} guardada${summaries.length === 1 ? '' : 's'}` : 'Sin configuraciones guardadas todavía');
+    } catch (error) {
+      setPlantLibraryStatus(`No se pudo leer la biblioteca: ${(error as Error).message}`);
+    }
+  }, []);
+
+  const switchPlantConfiguration = useCallback(async (plantId: string) => {
+    if (!plantId || plantId === plant.id) return;
+    setPlantLibraryStatus('Cambiando planta…');
+    const nextPlant = await loadPlantModelFromBrowserDb(plantId);
+    if (!nextPlant) {
+      setPlantLibraryStatus(`No existe la planta ${plantId}`);
+      return;
+    }
+    await markLatestPlantModelInBrowserDb(nextPlant.id);
+    setPlant(nextPlant);
+    setSelectedNodeId(nextPlant.nodes[0]?.id ?? '');
+    setPropertiesNodeId(null);
+    setPropertiesConnectionId(null);
+    setSchedule(null);
+    setPersistenceStatus('Saved to local DB');
+    setPlantLibraryStatus(`Planta activa: ${nextPlant.name}`);
+    void refreshPlantLibrary();
+  }, [plant.id, refreshPlantLibrary]);
+
+  const saveAsPlantConfiguration = useCallback(async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    try {
+      const nextPlant = createNamedPlantConfiguration(plant, newPlantConfigName, savedPlants.map((summary) => summary.id));
+      setPlantLibraryStatus('Guardando nueva configuración…');
+      await persistPlantModelToBrowserDb(nextPlant);
+      setPlant(nextPlant);
+      setSelectedNodeId(nextPlant.nodes[0]?.id ?? '');
+      setPropertiesNodeId(null);
+      setPropertiesConnectionId(null);
+      setNewPlantConfigName('');
+      setSchedule(null);
+      setPersistenceStatus('Saved to local DB');
+      setPlantLibraryStatus(`Configuración guardada: ${nextPlant.name}`);
+      void refreshPlantLibrary();
+    } catch (error) {
+      setPlantLibraryStatus((error as Error).message);
+    }
+  }, [newPlantConfigName, plant, refreshPlantLibrary, savedPlants]);
 
   const updateNode = (nodeId: string, patch: Partial<PlantNode>) => {
     setPlant((current) => ({
@@ -974,14 +1172,16 @@ export default function App() {
           setSelectedNodeId(persistedPlant.nodes[0]?.id ?? '');
         }
         setStorageHydrated(true);
+        void refreshPlantLibrary();
       })
       .catch(() => {
         if (active) setStorageHydrated(true);
+        void refreshPlantLibrary();
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [refreshPlantLibrary]);
 
   useEffect(() => {
     if (!storageHydrated) return;
@@ -989,7 +1189,10 @@ export default function App() {
     setPersistenceStatus('Saving to local DB…');
     persistPlantModelToBrowserDb(plant)
       .then(() => {
-        if (active) setPersistenceStatus('Saved to local DB');
+        if (active) {
+          setPersistenceStatus('Saved to local DB');
+          void refreshPlantLibrary();
+        }
       })
       .catch((error) => {
         if (active) setPersistenceStatus(`DB save failed: ${(error as Error).message}`);
@@ -997,7 +1200,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [plant, storageHydrated]);
+  }, [plant, refreshPlantLibrary, storageHydrated]);
 
   useEffect(() => () => {
     if (dragFrameRef.current !== null) window.cancelAnimationFrame(dragFrameRef.current);
@@ -1069,6 +1272,51 @@ export default function App() {
           <button className="secondary-action" type="button" aria-label="Export JSON" onClick={() => setExportingJson(true)}>
             Exportar JSON
           </button>
+          <section className="plant-library-card" aria-label="Biblioteca de plantas">
+            <div className="plant-library-header">
+              <div>
+                <p className="eyebrow">Configuraciones</p>
+                <h3>Biblioteca de plantas</h3>
+              </div>
+              <span>{savedPlants.length}</span>
+            </div>
+            <label>
+              Cambiar planta guardada
+              <select
+                aria-label="Cambiar planta guardada"
+                value={savedPlants.some((summary) => summary.id === plant.id) ? plant.id : ''}
+                onChange={(event) => void switchPlantConfiguration(event.target.value)}
+              >
+                <option value="" disabled>{savedPlants.length ? 'Selecciona una planta' : 'Sin plantas guardadas'}</option>
+                {savedPlants.map((summary) => (
+                  <option key={summary.id} value={summary.id}>{summary.name}</option>
+                ))}
+              </select>
+            </label>
+            <form className="plant-library-form" aria-label="Guardar nueva configuración" onSubmit={(event) => void saveAsPlantConfiguration(event)}>
+              <label>
+                Nombre nueva configuración
+                <input
+                  aria-label="Nombre nueva configuración"
+                  placeholder="Ej. Línea granuladora B"
+                  value={newPlantConfigName}
+                  onChange={(event) => setNewPlantConfigName(event.target.value)}
+                />
+              </label>
+              <button className="secondary-action" type="submit" aria-label="Guardar como configuración">
+                Guardar como configuración
+              </button>
+            </form>
+            <ul className="plant-library-list" aria-label="Plantas guardadas">
+              {savedPlants.map((summary) => (
+                <li key={summary.id} className={summary.id === plant.id ? 'active' : ''}>
+                  <strong>{summary.name}</strong>
+                  <span>{summary.id === plant.id ? 'Activa' : `v${summary.version}`}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="plant-library-status">{plantLibraryStatus}</p>
+          </section>
           <div className="solver-settings" aria-label="Opciones del solver">
             <label>
               Estrategia de planificación

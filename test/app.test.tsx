@@ -9,6 +9,7 @@ import App, {
   buildEquipmentFlowNodes,
   buildProductDependencyGraph,
   importPlantModelFromJson,
+  loadPlantModelFromBrowserDb,
   serializePlantModelForExport,
   mergePositionChanges,
   movePlantConnectionEndpoint,
@@ -595,6 +596,54 @@ describe('ForgePlan visual plant editor', () => {
     }
   });
 
+  it('does not hang when an IndexedDB plant row contains invalid JSON', async () => {
+    const originalIndexedDb = window.indexedDB;
+    const corruptPlantId = 'plant_corrupt';
+    const fakeDb = {
+      transaction: () => ({
+        error: null,
+        onerror: null,
+        objectStore: () => ({
+          get: () => {
+            const request: { result: { json: string }; error: null; onerror: ((event: Event) => void) | null; onsuccess: ((event: Event) => void) | null } = {
+              result: { json: '{bad json' },
+              error: null,
+              onerror: null,
+              onsuccess: null,
+            };
+            window.setTimeout(() => request.onsuccess?.(new Event('success')), 0);
+            return request as unknown as IDBRequest;
+          },
+        }),
+      }),
+      close: vi.fn(),
+    };
+    const fakeIndexedDb = {
+      open: () => {
+        const request: { result: typeof fakeDb; error: null; onerror: ((event: Event) => void) | null; onupgradeneeded: ((event: Event) => void) | null; onsuccess: ((event: Event) => void) | null } = {
+          result: fakeDb,
+          error: null,
+          onerror: null,
+          onupgradeneeded: null,
+          onsuccess: null,
+        };
+        window.setTimeout(() => request.onsuccess?.(new Event('success')), 0);
+        return request as unknown as IDBOpenDBRequest;
+      },
+    } as unknown as IDBFactory;
+
+    Object.defineProperty(window, 'indexedDB', { configurable: true, value: fakeIndexedDb });
+    try {
+      const result = await Promise.race([
+        loadPlantModelFromBrowserDb(corruptPlantId),
+        new Promise<'timeout'>((resolve) => window.setTimeout(() => resolve('timeout'), 50)),
+      ]);
+      expect(result).toBeUndefined();
+    } finally {
+      Object.defineProperty(window, 'indexedDB', { configurable: true, value: originalIndexedDb });
+    }
+  });
+
   it('loads the latest model persisted in the local browser DB on startup', async () => {
     const persistedPlant = { ...createDemoPlant(), id: 'plant_persisted', name: 'Persisted CIP Plant' };
     window.localStorage.setItem('plants:plant_persisted', serializePlantModelForExport(persistedPlant));
@@ -604,6 +653,41 @@ describe('ForgePlan visual plant editor', () => {
 
     expect(await screen.findByRole('heading', { name: 'Persisted CIP Plant' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText(/Saved to local DB/).length).toBeGreaterThan(0));
+  });
+
+  it('lists saved plant configurations and switches the active model from the browser DB', async () => {
+    const user = userEvent.setup();
+    const cipPlant = { ...createDemoPlant(), id: 'plant_cip', name: 'CIP Cleaning Line' };
+    const packagingPlant = { ...createDemoPlant(), id: 'plant_packaging', name: 'Packaging Cell' };
+    window.localStorage.setItem('plants:plant_cip', serializePlantModelForExport(cipPlant));
+    window.localStorage.setItem('plants:plant_packaging', serializePlantModelForExport(packagingPlant));
+    window.localStorage.setItem('forgeplan.latestPlantId', 'plant_cip');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'CIP Cleaning Line' })).toBeInTheDocument();
+    const library = await screen.findByRole('region', { name: 'Biblioteca de plantas' });
+    expect(library).toHaveTextContent('CIP Cleaning Line');
+    expect(library).toHaveTextContent('Packaging Cell');
+
+    await user.selectOptions(screen.getByLabelText('Cambiar planta guardada'), 'plant_packaging');
+
+    expect(await screen.findByRole('heading', { name: 'Packaging Cell' })).toBeInTheDocument();
+    expect(window.localStorage.getItem('forgeplan.latestPlantId')).toBe('plant_packaging');
+  });
+
+  it('saves the current model as a new named plant configuration', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'PFG Feed Production Plant' });
+    await user.clear(screen.getByLabelText('Nombre nueva configuración'));
+    await user.type(screen.getByLabelText('Nombre nueva configuración'), 'Línea granuladora B');
+    await user.click(screen.getByRole('button', { name: 'Guardar como configuración' }));
+
+    expect(await screen.findByRole('heading', { name: 'Línea granuladora B' })).toBeInTheDocument();
+    expect(window.localStorage.getItem('forgeplan.latestPlantId')).toBe('plant_linea_granuladora_b');
+    expect(window.localStorage.getItem('plants:plant_linea_granuladora_b')).toContain('Línea granuladora B');
   });
 
   it('renders planner-facing orders and lets the planner edit demo demand', async () => {
