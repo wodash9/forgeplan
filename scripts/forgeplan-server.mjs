@@ -5,10 +5,14 @@ const port = Number(process.env.FORGEPLAN_PORT ?? process.env.PORT ?? 8787);
 const host = process.env.FORGEPLAN_HOST ?? '127.0.0.1';
 const dbPath = process.env.FORGEPLAN_DB ?? './forgeplan.db';
 
-const { server } = createForgePlanServer({ dbPath, port, host });
+const staticDir = process.env.FORGEPLAN_STATIC_DIR ?? './dist-web';
+
+const { server } = createForgePlanServer({ dbPath, port, host, staticDir });
 
 server.listen(port, host, () => {
-  console.log(`ForgePlan backend listening on http://${host}:${port}/api`);
+  console.log(`ForgePlan server listening on http://${host}:${port}`);
+  console.log(`API: http://${host}:${port}/api`);
+  console.log(`Static assets: ${staticDir}`);
   console.log(`SQLite database: ${dbPath}`);
 });
 

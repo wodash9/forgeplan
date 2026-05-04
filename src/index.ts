@@ -6,3 +6,4 @@ export * from './storage/localStore.js';
 export * from './solver/index.js';
 export * from './backend/api.js';
 export * from './backend/server.js';
+export * from './backend/userManagement.js';

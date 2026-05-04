@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@xyflow/react": "^12.10.2",
+    "keycloak-js": "^26.2.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "zod": "^3.24.4"

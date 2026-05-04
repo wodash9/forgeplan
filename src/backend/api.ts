@@ -7,12 +7,16 @@ import type { Plant, Scenario, Schedule, SolverStrategy, ValidationResult } from
 import type { SolverAdapter, SolverOptions } from '../solver/types.js';
 import { validatePlant } from '../validation/validatePlant.js';
 import { ForgePlanLocalStore, StoreRelationshipError, StoreValidationError } from '../storage/localStore.js';
+import { createKeycloakUserManagementFromEnv, UserManagementError, type UserManagementAdapter } from './userManagement.js';
 
 export type ApiSolveStrategy = Extract<SolverStrategy, 'mock' | 'cp_sat'>;
+export type ApiAccessMode = 'open' | 'keycloak';
 
 export interface ForgePlanApiOptions {
   store: ForgePlanLocalStore;
   solverAdapters?: Partial<Record<ApiSolveStrategy, SolverAdapter>> | undefined;
+  userManagement?: UserManagementAdapter | undefined;
+  apiAccessMode?: ApiAccessMode | undefined;
 }
 
 export interface ForgePlanApi {
@@ -23,13 +27,24 @@ const BACKEND_MODELS = ['Plant', 'Material', 'PlantNode', 'Connection', 'Order',
 const MAX_SOLVE_TIME_LIMIT_SECONDS = 300;
 const MAX_SOLVE_WORKERS = 16;
 
-export function createForgePlanApi({ store, solverAdapters = {} }: ForgePlanApiOptions): ForgePlanApi {
+export function createForgePlanApi({
+  store,
+  solverAdapters = {},
+  userManagement = createKeycloakUserManagementFromEnv(),
+  apiAccessMode = apiAccessModeFromEnv(),
+}: ForgePlanApiOptions): ForgePlanApi {
   return {
-    fetch: (request) => handleApiRequest(store, request, solverAdapters),
+    fetch: (request) => handleApiRequest(store, request, solverAdapters, userManagement, apiAccessMode),
   };
 }
 
-async function handleApiRequest(store: ForgePlanLocalStore, request: Request, solverAdapters: Partial<Record<ApiSolveStrategy, SolverAdapter>>): Promise<Response> {
+async function handleApiRequest(
+  store: ForgePlanLocalStore,
+  request: Request,
+  solverAdapters: Partial<Record<ApiSolveStrategy, SolverAdapter>>,
+  userManagement: UserManagementAdapter,
+  apiAccessMode: ApiAccessMode,
+): Promise<Response> {
   try {
     const url = new URL(request.url);
     const segments = url.pathname.split('/').filter(Boolean);
@@ -41,10 +56,15 @@ async function handleApiRequest(store: ForgePlanLocalStore, request: Request, so
       return jsonResponse({ status: 'ok', models: [...BACKEND_MODELS], storage: { schemaVersion: readSchemaVersion(store) } });
     }
 
+    if (apiAccessMode === 'keycloak' && !(segments[1] === 'admin' && segments[2] === 'users')) {
+      await requireConfiguredApiUser(userManagement, request);
+    }
+
     if (segments[1] === 'models' && request.method === 'GET') {
       return jsonResponse({ models: describeBackendModels() });
     }
 
+    if (segments[1] === 'admin' && segments[2] === 'users') return await handleUserManagement(userManagement, request, segments, url);
     if (segments[1] === 'plants') return await handlePlants(store, request, segments, solverAdapters);
     if (segments[1] === 'scenarios') return await handleScenarios(store, request, segments, url);
     if (segments[1] === 'schedules') return await handleSchedules(store, request, segments, url);
@@ -60,6 +80,39 @@ async function handleApiRequest(store: ForgePlanLocalStore, request: Request, so
   } catch (error) {
     return mapErrorToResponse(error);
   }
+}
+
+async function requireConfiguredApiUser(userManagement: UserManagementAdapter, request: Request): Promise<void> {
+  if (!userManagement.isConfigured()) {
+    throw new UserManagementError(503, 'api_auth_unavailable', userManagement.configurationMessage ?? 'ForgePlan API access is protected but Keycloak is not configured.');
+  }
+  await userManagement.requireUser(request);
+}
+
+async function handleUserManagement(userManagement: UserManagementAdapter, request: Request, segments: string[], url: URL): Promise<Response> {
+  if (!userManagement.isConfigured()) {
+    return errorResponse(503, 'user_management_unavailable', userManagement.configurationMessage ?? 'Keycloak user management is not configured on this ForgePlan server.');
+  }
+
+  const admin = await userManagement.requireAdmin(request);
+  if (segments.length === 3 && request.method === 'GET') {
+    return jsonResponse({ users: await userManagement.listUsers({ search: url.searchParams.get('search') ?? undefined }, admin) });
+  }
+  if (segments.length === 3 && request.method === 'POST') {
+    return jsonResponse({ user: await userManagement.createUser(await parseJsonBody(request), admin) }, 201);
+  }
+
+  const userId = segments[3];
+  if (!userId) return errorResponse(404, 'not_found', 'User management route does not exist.');
+  if (segments.length === 4 && (request.method === 'PUT' || request.method === 'PATCH')) {
+    return jsonResponse({ user: await userManagement.updateUser(userId, await parseJsonBody(request), admin) });
+  }
+  if (segments.length === 4 && request.method === 'DELETE') {
+    await userManagement.deleteUser(userId, admin);
+    return jsonResponse({ deleted: true, id: userId });
+  }
+
+  return errorResponse(404, 'not_found', 'User management route does not exist.');
 }
 
 async function handlePlants(store: ForgePlanLocalStore, request: Request, segments: string[], solverAdapters: Partial<Record<ApiSolveStrategy, SolverAdapter>>): Promise<Response> {
@@ -191,8 +244,15 @@ function handleSolveFromBody(
 }
 
 function createDefaultSolveAdapter(strategy: ApiSolveStrategy): SolverAdapter {
-  if (strategy === 'cp_sat') return new OrToolsCpSatAdapter({ pythonBinary: process.env.FORGEPLAN_PYTHON_BINARY });
+  if (strategy === 'cp_sat') {
+    if (process.env.FORGEPLAN_CP_SAT_ENABLED !== '1') throw new InvalidSolveOptionsError('CP-SAT solver is disabled on this ForgePlan server.');
+    return new OrToolsCpSatAdapter({ pythonBinary: process.env.FORGEPLAN_PYTHON_BINARY });
+  }
   return mockSolverAdapter;
+}
+
+function apiAccessModeFromEnv(env: NodeJS.ProcessEnv = process.env): ApiAccessMode {
+  return env.FORGEPLAN_API_ACCESS_MODE === 'keycloak' ? 'keycloak' : 'open';
 }
 
 function parseSolveOptions(body: SolveRequestBody): SolverOptions {
@@ -280,9 +340,9 @@ async function parseJsonBody(request: Request): Promise<unknown> {
 function responseHeaders(): HeadersInit {
   return {
     'content-type': 'application/json; charset=utf-8',
-    'access-control-allow-origin': 'http://127.0.0.1:5173',
+    'access-control-allow-origin': process.env.FORGEPLAN_CORS_ALLOW_ORIGIN ?? 'http://127.0.0.1:5173',
     'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-    'access-control-allow-headers': 'content-type',
+    'access-control-allow-headers': 'authorization,content-type',
     'vary': 'origin',
   };
 }
@@ -306,6 +366,7 @@ function errorResponse(status: number, code: string, message: string, details?: 
 }
 
 function mapErrorToResponse(error: unknown): Response {
+  if (error instanceof UserManagementError) return errorResponse(error.status, error.code, error.message, error.details);
   if (error instanceof InvalidJsonError) return errorResponse(400, 'invalid_json', error.message);
   if (error instanceof InvalidSolveOptionsError) return errorResponse(400, 'invalid_body', error.message);
   if (error instanceof NotFoundError) return errorResponse(404, 'not_found', error.message);

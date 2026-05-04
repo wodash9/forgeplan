@@ -51,6 +51,7 @@ export default function LandingPage() {
           <a href="#problema">Problema</a>
           <a href="#producto">Producto</a>
           <a href="#demo">Demo</a>
+          <a href="/app">Plataforma</a>
           <a className="nav-cta" href={demoPath}>Abrir demo</a>
         </div>
       </nav>
@@ -65,6 +66,7 @@ export default function LandingPage() {
           </p>
           <div className="hero-actions">
             <a className="primary-cta" href={demoPath}>Ver demo interactiva</a>
+            <a className="secondary-cta" href="/app">Entrar plataforma</a>
             <a className="secondary-cta" href="#producto">Cómo funciona</a>
           </div>
           <div className="hero-note">

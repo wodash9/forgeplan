@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   createForgePlanApi,
   createForgePlanServer,
+  createKeycloakUserManagementFromEnv,
   ForgePlanLocalStore,
+  UserManagementError,
   type Plant,
   type Schedule,
   type SolverAdapter,
@@ -338,6 +340,35 @@ describe('ForgePlan backend API', () => {
     }
   });
 
+  it('serves the built SPA and falls back to index.html for platform routes before API handling', async () => {
+    const staticDir = join(tempDir, 'dist-web');
+    mkdirSync(staticDir, { recursive: true });
+    writeFileSync(join(staticDir, 'index.html'), '<html><body><div id="root">ForgePlan SPA</div></body></html>');
+    writeFileSync(join(staticDir, 'asset.txt'), 'asset-ok');
+    const runtime = createForgePlanServer({ dbPath: join(tempDir, 'static.db'), host: '127.0.0.1', port: 0, staticDir });
+    await new Promise<void>((resolve) => runtime.server.listen(0, '127.0.0.1', resolve));
+    try {
+      const address = runtime.server.address();
+      if (!address || typeof address === 'string') throw new Error('Expected TCP server address.');
+      const baseUrl = `http://127.0.0.1:${address.port}`;
+
+      const appResponse = await fetch(`${baseUrl}/app`);
+      expect(appResponse.status).toBe(200);
+      expect(appResponse.headers.get('content-type')).toContain('text/html');
+      expect(await appResponse.text()).toContain('ForgePlan SPA');
+
+      const assetResponse = await fetch(`${baseUrl}/asset.txt`);
+      expect(assetResponse.status).toBe(200);
+      expect(await assetResponse.text()).toBe('asset-ok');
+
+      const apiResponse = await fetch(`${baseUrl}/api/health`);
+      expect(apiResponse.status).toBe(200);
+      expect(await apiResponse.json()).toMatchObject({ status: 'ok' });
+    } finally {
+      await new Promise<void>((resolve) => runtime.server.close(() => resolve()));
+    }
+  });
+
   it('returns structured errors for missing resources and invalid JSON', async () => {
     const missingResponse = await api.fetch(new Request('http://forgeplan.local/api/plants/missing'));
     expect(missingResponse.status).toBe(404);
@@ -350,5 +381,221 @@ describe('ForgePlan backend API', () => {
     }));
     expect(invalidResponse.status).toBe(400);
     expect(await invalidResponse.json()).toMatchObject({ error: { code: 'invalid_json' } });
+  });
+
+  it('reports Keycloak user management as unavailable until the server-side adapter is configured', async () => {
+    const response = await api.fetch(new Request('http://forgeplan.local/api/admin/users', {
+      headers: { authorization: 'Bearer valid-admin-token' },
+    }));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      error: {
+        code: 'user_management_unavailable',
+        message: expect.stringContaining('Keycloak'),
+      },
+    });
+  });
+
+  it('requires a Keycloak bearer for protected API routes in keycloak mode while leaving health public', async () => {
+    const plant = readPlantFixture('minimal-valid-plant.json');
+    store.savePlant(plant);
+    const userManagement = {
+      isConfigured: () => true,
+      async requireUser(request: Request) {
+        if (!request.headers.get('authorization')) throw new UserManagementError(401, 'missing_bearer_token', 'Bearer token required.');
+        return { id: 'user-1', username: 'planner', roles: ['forgeplan-user'] };
+      },
+      async requireAdmin(request: Request) {
+        if (!request.headers.get('authorization')) throw new UserManagementError(401, 'missing_bearer_token', 'Bearer token required.');
+        return { id: 'admin-1', username: 'ventura', roles: ['forgeplan-admin'] };
+      },
+      async listUsers() { return []; },
+      async createUser() { return { id: 'user-2', username: 'operator', enabled: true }; },
+      async updateUser(id: string) { return { id, username: 'operator', enabled: true }; },
+      async deleteUser() {},
+    };
+    const protectedApi = createForgePlanApi({ store, userManagement, apiAccessMode: 'keycloak' });
+
+    const healthResponse = await protectedApi.fetch(new Request('http://forgeplan.local/api/health'));
+    expect(healthResponse.status).toBe(200);
+
+    const anonymousModelsResponse = await protectedApi.fetch(new Request('http://forgeplan.local/api/models'));
+    expect(anonymousModelsResponse.status).toBe(401);
+
+    const anonymousPlantsResponse = await protectedApi.fetch(new Request('http://forgeplan.local/api/plants'));
+    expect(anonymousPlantsResponse.status).toBe(401);
+    expect(await anonymousPlantsResponse.json()).toMatchObject({ error: { code: 'missing_bearer_token' } });
+
+    const authenticatedPlantsResponse = await protectedApi.fetch(new Request('http://forgeplan.local/api/plants', {
+      headers: { authorization: 'Bearer user-token' },
+    }));
+    expect(authenticatedPlantsResponse.status).toBe(200);
+  });
+
+  it('allows Authorization in CORS preflight responses', async () => {
+    const response = await api.fetch(new Request('http://forgeplan.local/api/admin/users', { method: 'OPTIONS' }));
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get('access-control-allow-headers')).toContain('authorization');
+  });
+
+  it('keeps CP-SAT disabled by default in the public Node runtime', async () => {
+    const originalFlag = process.env.FORGEPLAN_CP_SAT_ENABLED;
+    delete process.env.FORGEPLAN_CP_SAT_ENABLED;
+    try {
+      const plant = readPlantFixture('minimal-valid-plant.json');
+      store.savePlant(plant);
+      const response = await api.fetch(new Request('http://forgeplan.local/api/solve/cp-sat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ plantId: plant.id }),
+      }));
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ error: { code: 'invalid_body', message: expect.stringContaining('disabled') } });
+    } finally {
+      if (originalFlag === undefined) delete process.env.FORGEPLAN_CP_SAT_ENABLED;
+      else process.env.FORGEPLAN_CP_SAT_ENABLED = originalFlag;
+    }
+  });
+
+  it('does not grant ForgePlan admin rights from OAuth scopes or generic role claims', async () => {
+    const fetchImpl = async (url: string | URL | Request) => {
+      const href = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url;
+      if (href.includes('/token/introspect')) {
+        return Response.json({
+          active: true,
+          sub: 'user-1',
+          preferred_username: 'scope-admin',
+          scope: 'openid forgeplan-admin admin',
+          roles: ['forgeplan-admin'],
+          resource_access: { 'other-client': { roles: ['forgeplan-admin'] } },
+        });
+      }
+      return Response.json({ error: 'unexpected' }, { status: 500 });
+    };
+    const adapter = createKeycloakUserManagementFromEnv({
+      FORGEPLAN_KEYCLOAK_URL: 'https://auth.example.test',
+      FORGEPLAN_KEYCLOAK_REALM: 'etharlia',
+      FORGEPLAN_KEYCLOAK_ADMIN_CLIENT_ID: 'forgeplan-admin-api',
+      FORGEPLAN_KEYCLOAK_ADMIN_CLIENT_SECRET: 'server-secret',
+      FORGEPLAN_KEYCLOAK_ROLE_CLIENT_ID: 'forgeplan-spa',
+      FORGEPLAN_ADMIN_ROLES: 'forgeplan-admin',
+    }, fetchImpl as typeof fetch);
+
+    await expect(adapter.requireAdmin(new Request('http://forgeplan.local/api/admin/users', {
+      headers: { authorization: 'Bearer user-token' },
+    }))).rejects.toMatchObject({ status: 403, code: 'forbidden_user_management' });
+  });
+
+  it('rejects encoded path traversal user ids before calling Keycloak Admin user endpoints', async () => {
+    const calledUrls: string[] = [];
+    const fetchImpl = async (url: string | URL | Request) => {
+      const href = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url;
+      calledUrls.push(href);
+      if (href.includes('/token/introspect')) {
+        return Response.json({
+          active: true,
+          sub: 'admin-1',
+          preferred_username: 'ventura',
+          resource_access: { 'forgeplan-spa': { roles: ['forgeplan-admin'] } },
+        });
+      }
+      if (href.includes('/protocol/openid-connect/token')) return Response.json({ access_token: 'admin-api-token', expires_in: 30 });
+      return Response.json({ error: 'unsafe keycloak call' }, { status: 500 });
+    };
+    const adapter = createKeycloakUserManagementFromEnv({
+      FORGEPLAN_KEYCLOAK_URL: 'https://auth.example.test',
+      FORGEPLAN_KEYCLOAK_REALM: 'etharlia',
+      FORGEPLAN_KEYCLOAK_ADMIN_CLIENT_ID: 'forgeplan-admin-api',
+      FORGEPLAN_KEYCLOAK_ADMIN_CLIENT_SECRET: 'server-secret',
+      FORGEPLAN_KEYCLOAK_ROLE_CLIENT_ID: 'forgeplan-spa',
+      FORGEPLAN_ADMIN_ROLES: 'forgeplan-admin',
+    }, fetchImpl as typeof fetch);
+    const apiWithRealKeycloakAdapter = createForgePlanApi({ store, userManagement: adapter });
+
+    const response = await apiWithRealKeycloakAdapter.fetch(new Request('http://forgeplan.local/api/admin/users/%252e%252e', {
+      method: 'PATCH',
+      headers: { authorization: 'Bearer user-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled: false }),
+    }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: 'invalid_user_input', message: expect.stringContaining('unsafe path') } });
+    expect(calledUrls.every((url) => !url.includes('/admin/realms/etharlia/users/'))).toBe(true);
+  });
+
+  it('delegates ForgePlan user access CRUD to the configured Keycloak user management adapter', async () => {
+    const calls: string[] = [];
+    const userManagement = {
+      isConfigured: () => true,
+      async requireUser(request: Request) {
+        calls.push(`user:${request.headers.get('authorization')}`);
+        return { id: 'user-admin-1', username: 'ventura', roles: ['forgeplan-user'] };
+      },
+      async requireAdmin(request: Request) {
+        calls.push(`auth:${request.headers.get('authorization')}`);
+        return { id: 'admin-1', username: 'ventura', roles: ['forgeplan-admin'] };
+      },
+      async listUsers({ search }: { search?: string | undefined }) {
+        calls.push(`list:${search ?? ''}`);
+        return [{ id: 'user-1', username: 'planner', email: 'planner@example.com', firstName: 'Plan', lastName: 'Ner', enabled: true }];
+      },
+      async createUser(input: unknown) {
+        calls.push(`create:${JSON.stringify(input)}`);
+        return { id: 'user-2', username: 'operator', email: 'operator@example.com', enabled: true };
+      },
+      async updateUser(id: string, input: unknown) {
+        calls.push(`update:${id}:${JSON.stringify(input)}`);
+        return { id, username: 'planner', email: 'planner@example.com', firstName: 'Planner', enabled: false };
+      },
+      async deleteUser(id: string) {
+        calls.push(`delete:${id}`);
+      },
+    };
+    const apiWithUsers = createForgePlanApi({ store, userManagement });
+
+    const listResponse = await apiWithUsers.fetch(new Request('http://forgeplan.local/api/admin/users?search=plan', {
+      headers: { authorization: 'Bearer valid-admin-token' },
+    }));
+    expect(listResponse.status).toBe(200);
+    expect(await listResponse.json()).toEqual({
+      users: [{ id: 'user-1', username: 'planner', email: 'planner@example.com', firstName: 'Plan', lastName: 'Ner', enabled: true }],
+    });
+
+    const createResponse = await apiWithUsers.fetch(new Request('http://forgeplan.local/api/admin/users', {
+      method: 'POST',
+      headers: { authorization: 'Bearer valid-admin-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'operator', email: 'operator@example.com', password: 'TempPass123!', temporaryPassword: true }),
+    }));
+    expect(createResponse.status).toBe(201);
+    expect(await createResponse.json()).toMatchObject({ user: { id: 'user-2', username: 'operator' } });
+
+    const updateResponse = await apiWithUsers.fetch(new Request('http://forgeplan.local/api/admin/users/user-1', {
+      method: 'PATCH',
+      headers: { authorization: 'Bearer valid-admin-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ firstName: 'Planner', enabled: false }),
+    }));
+    expect(updateResponse.status).toBe(200);
+    expect(await updateResponse.json()).toMatchObject({ user: { id: 'user-1', firstName: 'Planner', enabled: false } });
+
+    const deleteResponse = await apiWithUsers.fetch(new Request('http://forgeplan.local/api/admin/users/user-1', {
+      method: 'DELETE',
+      headers: { authorization: 'Bearer valid-admin-token' },
+    }));
+    expect(deleteResponse.status).toBe(200);
+    expect(await deleteResponse.json()).toEqual({ deleted: true, id: 'user-1' });
+
+    expect(calls).toEqual([
+      'auth:Bearer valid-admin-token',
+      'list:plan',
+      'auth:Bearer valid-admin-token',
+      'create:{"username":"operator","email":"operator@example.com","password":"TempPass123!","temporaryPassword":true}',
+      'auth:Bearer valid-admin-token',
+      'update:user-1:{"firstName":"Planner","enabled":false}',
+      'auth:Bearer valid-admin-token',
+      'delete:user-1',
+    ]);
   });
 });
